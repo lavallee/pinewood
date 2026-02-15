@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PINEWOOD DERBY // Race Engineering Lab</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  @keyframes scanline {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  @keyframes glow { 0%,100% { box-shadow: 0 0 8px var(--race-red), 0 0 20px rgba(220,38,38,0.3); } 50% { box-shadow: 0 0 15px var(--race-red), 0 0 40px rgba(220,38,38,0.5); } }
+  @keyframes slideIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes dataStream { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+  @keyframes revMeter { 0% { width: 0%; } 100% { width: var(--target-width); } }
+  @keyframes borderTrace {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+  }
+  @keyframes fadeInStagger { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform: translateX(0); } }
+  @keyframes hud-flicker {
+    0%, 95%, 100% { opacity: 1; }
+    96% { opacity: 0.8; }
+    97% { opacity: 1; }
+    98% { opacity: 0.6; }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-panel: #0d0d14;
+    --bg-card: #12121c;
+    --bg-card-hover: #1a1a28;
+    --race-red: #dc2626;
+    --race-red-dim: #991b1b;
+    --amber: #f59e0b;
+    --amber-dim: #92400e;
+    --green: #22c55e;
+    --green-dim: #166534;
+    --blue: #3b82f6;
+    --text: #e8e8f0;
+    --text-dim: #6b6b80;
+    --text-muted: #44445a;
+    --border: #1e1e2e;
+    --border-light: #2a2a3e;
+    --carbon-1: #101018;
+    --carbon-2: #0e0e16;
+  }
+
+  /* Carbon fiber pattern */
+  body {
+    font-family: 'Rajdhani', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    background-image:
+      linear-gradient(45deg, var(--carbon-1) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--carbon-1) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--carbon-2) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--carbon-2) 75%);
+    background-size: 4px 4px;
+    background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+  }
+
+  /* ======== HEADER ======== */
+  header {
+    grid-column: 1 / -1;
+    background: linear-gradient(180deg, #111119 0%, #0d0d14 100%);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    height: 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--race-red), var(--amber), var(--race-red), transparent);
+    animation: dataStream 3s linear infinite;
+    background-size: 200% 100%;
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 200px;
+    width: 120px;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(220,38,38,0.03), transparent);
+    transform: skewX(-20deg);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-flag {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    transform: rotate(-5deg);
+    border: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+  .header-flag div:nth-child(1),
+  .header-flag div:nth-child(4) { background: #fff; }
+  .header-flag div:nth-child(2),
+  .header-flag div:nth-child(3) { background: #1a1a1a; }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    letter-spacing: 4px;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  header h1 .red { color: var(--race-red); }
+  header h1 .dim {
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .header-telemetry {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .weight-gauge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .weight-gauge-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .weight-gauge-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 2px;
+    min-width: 120px;
+    text-align: right;
+  }
+  .weight-gauge-bar {
+    width: 180px;
+    height: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .weight-gauge-bar::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(255,255,255,0.03) 8px, rgba(255,255,255,0.03) 9px);
+  }
+  .weight-gauge-fill {
+    height: 100%;
+    transition: width 0.6s cubic-bezier(0.16,1,0.3,1), background 0.3s;
+    position: relative;
+  }
+  .weight-gauge-fill::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: #fff;
+    box-shadow: 0 0 6px #fff;
+  }
+
+  .status-light {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-light.warning { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .status-light.danger { background: var(--race-red); box-shadow: 0 0 6px var(--race-red); }
+
+  /* ======== VIEWPORT ======== */
+  #viewport {
+    position: relative;
+    background: #12141c;
+    overflow: hidden;
+  }
+  #viewport::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      linear-gradient(rgba(40,100,180,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(40,100,180,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #viewport::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  #three-canvas { width: 100%; height: 100%; display: block; }
+
+  /* Scanline overlay */
+  .scan-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 3;
+    overflow: hidden;
+  }
+  .scan-overlay::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(180deg, rgba(220,38,38,0.15), transparent);
+    animation: scanline 4s linear infinite;
+    filter: blur(1px);
+  }
+
+  /* HUD corner brackets */
+  .hud-bracket {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .hud-bracket.tl { top: 12px; left: 12px; border-top: 2px solid var(--race-red); border-left: 2px solid var(--race-red); }
+  .hud-bracket.tr { top: 12px; right: 12px; border-top: 2px solid var(--race-red); border-right: 2px solid var(--race-red); }
+  .hud-bracket.bl { bottom: 12px; left: 12px; border-bottom: 2px solid var(--race-red); border-left: 2px solid var(--race-red); }
+  .hud-bracket.br { bottom: 12px; right: 12px; border-bottom: 2px solid var(--race-red); border-right: 2px solid var(--race-red); }
+
+  .cog-indicator {
+    position: absolute;
+    top: 16px;
+    left: 40px;
+    z-index: 5;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(8px);
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--amber);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    animation: hud-flicker 8s infinite;
+  }
+  .cog-indicator .label {
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .cog-indicator span { color: var(--amber); }
+
+  .viewport-overlay {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    display: flex;
+    gap: 4px;
+    z-index: 5;
+  }
+  .viewport-overlay button {
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+  .viewport-overlay button:hover {
+    color: var(--text);
+    border-color: var(--race-red);
+    background: rgba(220,38,38,0.1);
+  }
+
+  .viewport-model-label {
+    position: absolute;
+    top: 16px;
+    right: 40px;
+    z-index: 5;
+    text-align: right;
+    font-family: 'Share Tech Mono', monospace;
+    animation: hud-flicker 8s infinite;
+  }
+  .viewport-model-label .model-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+  }
+  .viewport-model-label .model-spec {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  /* ======== PANEL ======== */
+  #panel {
+    background: var(--bg-panel);
+    overflow-y: auto;
+    border-left: 1px solid var(--border);
+    position: relative;
+  }
+  #panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--race-red), transparent 30%, transparent 70%, var(--race-red));
+    z-index: 2;
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-deep);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .tabs button {
+    flex: 1;
+    padding: 14px 4px 12px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .tabs button.active {
+    color: var(--race-red);
+    border-bottom-color: var(--race-red);
+  }
+  .tabs button.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 2px;
+    background: var(--race-red);
+    box-shadow: 0 0 10px var(--race-red), 0 0 20px rgba(220,38,38,0.3);
+  }
+  .tabs button:hover { color: var(--text-dim); }
+
+  .tab-content { padding: 16px; display: none; }
+  .tab-content.active {
+    display: block;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .section { margin-bottom: 20px; }
+  .section h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.95rem;
+    color: var(--race-red);
+    margin-bottom: 12px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section h3::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: var(--race-red);
+    flex-shrink: 0;
+  }
+
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 4px 0;
+  }
+  .control-row label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .control-row .value {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--amber);
+    min-width: 55px;
+    text-align: right;
+    letter-spacing: 1px;
+  }
+
+  /* Custom range slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 130px;
+    height: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--race-red);
+    border: 2px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(220,38,38,0.5);
+    transition: box-shadow 0.2s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 12px rgba(220,38,38,0.8);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: var(--race-red);
+    border: 2px solid #fff;
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  input[type="number"] {
+    width: 68px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--amber);
+    padding: 4px 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus { border-color: var(--race-red); }
+
+  select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+  }
+  select:focus { border-color: var(--race-red); }
+
+  /* Buttons */
+  .btn {
+    padding: 7px 16px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.4s;
+  }
+  .btn:hover::before { left: 100%; }
+
+  .btn-primary {
+    background: var(--race-red);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .btn-primary:hover {
+    background: #ef4444;
+    box-shadow: 0 0 20px rgba(220,38,38,0.4);
+  }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: var(--bg-card-hover);
+    color: var(--text);
+    border-color: var(--race-red);
+  }
+  .btn-sm { padding: 4px 10px; font-size: 0.7rem; }
+
+  /* Weight items */
+  .weight-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+    animation: fadeInStagger 0.3s ease-out both;
+  }
+  .weight-item:hover {
+    background: var(--bg-card-hover);
+    border-left-color: var(--race-red);
+  }
+  .weight-item .info { display: flex; flex-direction: column; }
+  .weight-item .name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .weight-item .detail {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+  .weight-item .actions { display: flex; gap: 4px; }
+
+  /* Rules */
+  .rule-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeInStagger 0.3s ease-out both;
+  }
+  .rule-icon {
+    font-size: 0.8rem;
+    min-width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    border: 1px solid;
+  }
+  .rule-pass .rule-icon {
+    color: var(--green);
+    border-color: var(--green-dim);
+    background: rgba(34,197,94,0.1);
+  }
+  .rule-fail .rule-icon {
+    color: var(--race-red);
+    border-color: var(--race-red-dim);
+    background: rgba(220,38,38,0.1);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .rule-text {
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  /* Axle cards */
+  .axle-wheel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 12px;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .axle-wheel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--blue);
+  }
+  .axle-wheel h4 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .axle-wheel h4 .dot {
+    width: 8px;
+    height: 8px;
+    box-shadow: 0 0 6px currentColor;
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .checkbox-row input[type="checkbox"] {
+    accent-color: var(--race-red);
+    width: 14px;
+    height: 14px;
+  }
+  .checkbox-row label {
+    font-size: 0.76rem;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .preset-btns { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* Print cards */
+  .print-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative;
+    transition: all 0.3s;
+  }
+  .print-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, var(--race-red), transparent);
+  }
+  .print-card:hover {
+    border-color: var(--border-light);
+    transform: translateX(2px);
+  }
+  .print-card h4 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .print-card p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .dim-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .dim-grid .dim {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+  }
+  .dim-grid .dim span { color: var(--amber); }
+
+  .add-weight-form {
+    background: var(--bg-card);
+    border: 1px solid var(--race-red);
+    padding: 14px;
+    margin-bottom: 12px;
+    display: none;
+    animation: slideIn 0.2s ease-out;
+  }
+  .add-weight-form.show { display: block; }
+  .form-row { margin-bottom: 8px; }
+  .form-row label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .form-row input[type="text"] {
+    width: 100%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    outline: none;
+  }
+  .form-row input[type="text"]:focus { border-color: var(--race-red); }
+  .form-row input, .form-row select { width: 100%; }
+  .form-actions { display: flex; gap: 6px; margin-top: 10px; }
+
+  /* Scrollbar */
+  #panel::-webkit-scrollbar { width: 4px; }
+  #panel::-webkit-scrollbar-track { background: var(--bg-panel); }
+  #panel::-webkit-scrollbar-thumb { background: var(--border-light); }
+  #panel::-webkit-scrollbar-thumb:hover { background: var(--race-red); }
+
+  /* Speed lines decorative */
+  .speed-lines {
+    position: absolute;
+    right: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    opacity: 0.15;
+    z-index: 0;
+  }
+  .speed-lines div {
+    height: 1px;
+    background: var(--race-red);
+  }
+
+  /* Alignment notes style */
+  .alignment-note {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+    padding: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+  }
+  .alignment-note strong {
+    color: var(--amber);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: auto 50vh 1fr; }
+    #panel { border-left: none; border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="header-left">
+      <div class="header-flag"><div></div><div></div><div></div><div></div></div>
+      <h1>
+        PINEWOOD <span class="red">DERBY</span>
+        <span class="dim">// Race Engineering Lab v2.0</span>
+      </h1>
+    </div>
+    <div class="speed-lines">
+      <div style="width:60px"></div>
+      <div style="width:45px"></div>
+      <div style="width:75px"></div>
+      <div style="width:30px"></div>
+      <div style="width:55px"></div>
+    </div>
+    <div class="header-telemetry">
+      <div class="weight-gauge">
+        <div>
+          <div class="weight-gauge-label">Mass</div>
+          <div class="weight-gauge-value" id="weight-text">0.00<span style="font-size:0.9rem;color:var(--text-dim)"> / 5.00 oz</span></div>
+        </div>
+        <div class="weight-gauge-bar">
+          <div class="weight-gauge-fill" id="weight-fill" style="width:0%;background:var(--green)"></div>
+        </div>
+        <div class="status-light" id="status-light"></div>
+      </div>
+    </div>
+  </header>
+
+  <div id="viewport">
+    <canvas id="three-canvas"></canvas>
+    <div class="scan-overlay"></div>
+    <div class="hud-bracket tl"></div>
+    <div class="hud-bracket tr"></div>
+    <div class="hud-bracket bl"></div>
+    <div class="hud-bracket br"></div>
+    <div class="cog-indicator">
+      <span class="label">Center of Gravity</span>
+      <span id="cog-display">—</span>
+      <span class="label" style="margin-top:4px;">Target</span>
+      <span id="cog-target-display" style="color:var(--green)">—</span>
+    </div>
+    <div class="viewport-model-label">
+      <div class="model-name">BSA BLOCK</div>
+      <div class="model-spec" id="model-spec">7.00 × 1.75 × 0.45 in</div>
+    </div>
+    <div class="viewport-overlay">
+      <button onclick="resetCamera()">Reset</button>
+      <button onclick="setView('top')">Top</button>
+      <button onclick="setView('side')">Side</button>
+      <button onclick="setView('front')">Front</button>
+      <button onclick="toggleSpin()" id="spin-btn">Spin</button>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="tabs">
+      <button class="active" onclick="switchTab('body', this)">Body</button>
+      <button onclick="switchTab('weights', this)">Weights</button>
+      <button onclick="switchTab('axles', this)">Axles</button>
+      <button onclick="switchTab('rules', this)">Rules</button>
+      <button onclick="switchTab('print', this)">3D Print</button>
+    </div>
+
+    <!-- BODY TAB -->
+    <div class="tab-content active" id="tab-body">
+      <div class="section">
+        <h3>Body Dimensions</h3>
+        <div class="control-row">
+          <label>Length</label>
+          <input type="range" min="5" max="7" step="0.05" value="7" oninput="updateBody('length', this.value)">
+          <span class="value" id="val-length">7.00"</span>
+        </div>
+        <div class="control-row">
+          <label>Width</label>
+          <input type="range" min="1.75" max="2.75" step="0.05" value="1.75" oninput="updateBody('width', this.value)">
+          <span class="value" id="val-width">1.75"</span>
+        </div>
+        <div class="control-row">
+          <label>Rear Height</label>
+          <input type="range" min="0.25" max="1.25" step="0.05" value="0.45" oninput="updateBody('rearHeight', this.value)">
+          <span class="value" id="val-rearHeight">0.45"</span>
+        </div>
+        <div class="control-row">
+          <label>Front Height</label>
+          <input type="range" min="0.2" max="1.0" step="0.05" value="0.3" oninput="updateBody('frontHeight', this.value)">
+          <span class="value" id="val-frontHeight">0.30"</span>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Wood Estimate</h3>
+        <div class="control-row">
+          <label>Raw block weight</label>
+          <input type="number" value="3.42" step="0.01" min="0" max="5" id="raw-wood-weight" oninput="updateWoodWeight()">
+          <span class="value">oz</span>
+        </div>
+        <div class="control-row">
+          <label>Est. after cuts</label>
+          <span class="value" id="val-cut-weight" style="color:var(--green)">—</span>
+        </div>
+        <div class="control-row">
+          <label>Material removed</label>
+          <span class="value" id="val-removed" style="color:var(--race-red)">—</span>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Quick Dimensions</h3>
+        <div class="dim-grid">
+          <div class="dim">Length: <span id="dim-l">7.00"</span></div>
+          <div class="dim">Width: <span id="dim-w">2.50"</span></div>
+          <div class="dim">Max Height: <span id="dim-h">0.45"</span></div>
+          <div class="dim">Clearance: <span id="dim-c">~0.44"</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEIGHTS TAB -->
+    <div class="tab-content" id="tab-weights">
+      <div class="section">
+        <h3>Weight Budget</h3>
+        <div class="control-row">
+          <label>Wood (after cuts)</label>
+          <span class="value" id="wt-wood">—</span>
+        </div>
+        <div class="control-row">
+          <label>Added weights</label>
+          <span class="value" id="wt-added">0.00 oz</span>
+        </div>
+        <div class="control-row">
+          <label>Wheels + Axles</label>
+          <input type="number" id="wheel-axle-weight" value="0.49" step="0.01" min="0" max="3" oninput="updateWheelAxleWeight()">
+          <span class="value">oz</span>
+        </div>
+        <div class="control-row" style="border-top:1px solid var(--border); padding-top:8px;">
+          <label style="color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Total</label>
+          <span class="value" id="wt-total" style="font-weight:700;">—</span>
+        </div>
+        <div class="control-row">
+          <label>Remaining to 5.00 oz</label>
+          <span class="value" id="wt-remaining" style="color:var(--amber)">—</span>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Components</h3>
+        <button class="btn btn-primary" onclick="toggleAddForm()" id="add-weight-btn">+ Add Weight</button>
+        <div class="add-weight-form" id="add-form">
+          <div class="form-row">
+            <label>Name</label>
+            <input type="text" id="wf-name" placeholder="e.g. Rear tungsten cube">
+          </div>
+          <div class="form-row">
+            <label>Type</label>
+            <select id="wf-type">
+              <option value="tungsten">Tungsten cube</option>
+              <option value="tungsten_cylinder">Tungsten cylinder</option>
+              <option value="lead_strip">Lead strip</option>
+              <option value="steel_bbs">Steel BBs</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Weight (oz)</label>
+            <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25">
+          </div>
+          <div class="form-row">
+            <label>Position X (inches from front)</label>
+            <input type="range" id="wf-x" min="0" max="7" step="0.1" value="5.5">
+          </div>
+          <div class="form-row">
+            <label>Position Y (left-right offset)</label>
+            <input type="range" id="wf-y" min="-1.2" max="1.2" step="0.1" value="0">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary btn-sm" onclick="addWeight()">Confirm</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleAddForm()">Cancel</button>
+          </div>
+        </div>
+        <div id="weight-list"></div>
+      </div>
+    </div>
+
+    <!-- AXLES TAB -->
+    <div class="tab-content" id="tab-axles">
+      <div class="section">
+        <h3>Axle Mounting</h3>
+        <div class="control-row">
+          <label>Mount Type</label>
+          <select id="axle-mount-type" onchange="updateAxleMountType(this.value)">
+            <option value="slot">Kit Slots (bottom)</option>
+            <option value="drilled">Drilled Holes (side)</option>
+          </select>
+        </div>
+        <div id="drilled-options" style="display:none;">
+          <div class="control-row">
+            <label>Hole Height</label>
+            <input type="range" id="drilled-height-slider" min="0.3" max="0.75" step="0.025" value="0.5" oninput="updateDrilledHeight(this.value)">
+            <span class="value" id="val-drilled-height">0.500"</span>
+          </div>
+          <div class="alignment-note" style="margin-top:8px;">
+            <strong>Drilled holes:</strong> Drilling into the side of the block gives more precise axle alignment and eliminates wobble vs. open slots. A <em>lower</em> hole raises the body higher off the track (more clearance); a <em>higher</em> hole drops the body closer to the track. Use a drill press or printed jig for straight holes.
+          </div>
+        </div>
+        <div id="slot-info" style="margin-top:8px;">
+          <div class="control-row">
+            <label>Slot height (fixed)</label>
+            <span class="value" id="val-slot-height">0.375"</span>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Presets</h3>
+        <div class="preset-btns">
+          <button class="btn btn-secondary btn-sm" onclick="applyAxlePreset('rail')">Rail Rider</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyAxlePreset('canted')">Canted</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyAxlePreset('stock')">Stock</button>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Front Axle</h3>
+        <div class="axle-wheel" style="--axle-color: var(--blue);">
+          <h4><span class="dot" style="background:var(--blue);color:var(--blue)"></span> Front Left</h4>
+          <div class="control-row"><label>Bend °</label><input type="range" min="0" max="4" step="0.25" value="1.5" oninput="updateAxle('fl','bend',this.value)"><span class="value" id="ax-fl-bend">1.5°</span></div>
+          <div class="control-row"><label>Camber °</label><input type="range" min="-3" max="3" step="0.25" value="0" oninput="updateAxle('fl','camber',this.value)"><span class="value" id="ax-fl-camber">0.0°</span></div>
+          <div class="checkbox-row"><input type="checkbox" id="ax-fl-raised" onchange="updateAxle('fl','raised',this.checked)"><label for="ax-fl-raised">Raised (non-contact)</label></div>
+        </div>
+        <div class="axle-wheel">
+          <h4><span class="dot" style="background:var(--green);color:var(--green)"></span> Front Right</h4>
+          <div class="control-row"><label>Bend °</label><input type="range" min="0" max="4" step="0.25" value="1.5" oninput="updateAxle('fr','bend',this.value)"><span class="value" id="ax-fr-bend">1.5°</span></div>
+          <div class="control-row"><label>Camber °</label><input type="range" min="-3" max="3" step="0.25" value="0" oninput="updateAxle('fr','camber',this.value)"><span class="value" id="ax-fr-camber">0.0°</span></div>
+          <div class="checkbox-row"><input type="checkbox" id="ax-fr-raised" onchange="updateAxle('fr','raised',this.checked)"><label for="ax-fr-raised">Raised (non-contact)</label></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Rear Axle</h3>
+        <div class="axle-wheel">
+          <h4><span class="dot" style="background:var(--amber);color:var(--amber)"></span> Rear Left</h4>
+          <div class="control-row"><label>Bend °</label><input type="range" min="0" max="4" step="0.25" value="1.5" oninput="updateAxle('rl','bend',this.value)"><span class="value" id="ax-rl-bend">1.5°</span></div>
+          <div class="control-row"><label>Camber °</label><input type="range" min="-3" max="3" step="0.25" value="0" oninput="updateAxle('rl','camber',this.value)"><span class="value" id="ax-rl-camber">0.0°</span></div>
+          <div class="checkbox-row"><input type="checkbox" id="ax-rl-raised" onchange="updateAxle('rl','raised',this.checked)"><label for="ax-rl-raised">Raised (non-contact)</label></div>
+        </div>
+        <div class="axle-wheel">
+          <h4><span class="dot" style="background:var(--race-red);color:var(--race-red)"></span> Rear Right</h4>
+          <div class="control-row"><label>Bend °</label><input type="range" min="0" max="4" step="0.25" value="1.5" oninput="updateAxle('rr','bend',this.value)"><span class="value" id="ax-rr-bend">1.5°</span></div>
+          <div class="control-row"><label>Camber °</label><input type="range" min="-3" max="3" step="0.25" value="0" oninput="updateAxle('rr','camber',this.value)"><span class="value" id="ax-rr-camber">0.0°</span></div>
+          <div class="checkbox-row"><input type="checkbox" id="ax-rr-raised" onchange="updateAxle('rr','raised',this.checked)"><label for="ax-rr-raised">Raised (non-contact)</label></div>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Alignment Notes</h3>
+        <div class="alignment-note">
+          <strong>Rail Rider:</strong> One front wheel raised, car steers into guide rail using 3 contact wheels. Reduces friction. Standard competitive setup.<br><br>
+          <strong>Bend Angle:</strong> Bending the axle head ~1.5° lifts the wheel slightly off straight, reducing hub friction and encouraging rail contact.<br><br>
+          <strong>Camber:</strong> Tilts the wheel so only the inner edge contacts the track, reducing rolling friction.
+        </div>
+      </div>
+    </div>
+
+    <!-- RULES TAB -->
+    <div class="tab-content" id="tab-rules">
+      <div class="section">
+        <h3>Pack 3 Compliance Check</h3>
+        <div id="rules-list"></div>
+      </div>
+    </div>
+
+    <!-- 3D PRINT TAB -->
+    <div class="tab-content" id="tab-print">
+      <div class="section">
+        <h3>Bambu A1 Tool Plans</h3>
+        <div class="print-card">
+          <h4>Axle Bender Jig</h4>
+          <p>Precision jig for bending BSA axles to exact angles. Features a protractor scale and pin vise slot. Print in PLA at 0.16mm layer height for accuracy.</p>
+          <div class="dim-grid">
+            <div class="dim">Size: <span>40 x 25 x 15mm</span></div>
+            <div class="dim">Infill: <span>80%</span></div>
+            <div class="dim">Time: <span>~25 min</span></div>
+            <div class="dim">Material: <span>PLA</span></div>
+          </div>
+        </div>
+        <div class="print-card">
+          <h4>Wheel Alignment Gauge</h4>
+          <p>Slides over the car body to check wheel alignment and camber. Two rails reference the body sides while indicator arms touch the wheel face.</p>
+          <div class="dim-grid">
+            <div class="dim">Size: <span>80 x 75 x 20mm</span></div>
+            <div class="dim">Infill: <span>40%</span></div>
+            <div class="dim">Time: <span>~45 min</span></div>
+            <div class="dim">Material: <span>PLA</span></div>
+          </div>
+        </div>
+        <div class="print-card">
+          <h4>Weight Placement Template</h4>
+          <p>Custom template matching your car body profile. Drop-in pockets for tungsten cubes positioned at the calculated optimal CoG location.</p>
+          <div class="dim-grid">
+            <div class="dim">Size: <span>Custom to car</span></div>
+            <div class="dim">Infill: <span>20%</span></div>
+            <div class="dim">Time: <span>~35 min</span></div>
+            <div class="dim">Material: <span>PLA</span></div>
+          </div>
+        </div>
+        <div class="print-card">
+          <h4>Axle Slot Guide</h4>
+          <p>Clamp-on drill guide that ensures axle slots are perfectly straight and at the correct height. Fits over the stock BSA block.</p>
+          <div class="dim-grid">
+            <div class="dim">Size: <span>50 x 45 x 30mm</span></div>
+            <div class="dim">Infill: <span>60%</span></div>
+            <div class="dim">Time: <span>~40 min</span></div>
+            <div class="dim">Material: <span>PLA</span></div>
+          </div>
+        </div>
+        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:12px;font-family:'Share Tech Mono',monospace;letter-spacing:0.5px;">All tools designed for Bambu A1 build volume (256 x 256 x 256mm). Use Bambu Studio with 0.4mm nozzle.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════╗
+// ║  CONFIGURATION — Edit these values to match your car & rules   ║
+// ╚══════════════════════════════════════════════════════════════════╝
+const CONFIG = {
+
+  // --- Stock Block (uncut) ---
+  stockLength:   7,      // inches — standard BSA block length
+  stockWidth:    1.75,   // inches — standard BSA block width
+  stockHeight:   1.25,   // inches — standard BSA block height (used for volume estimate)
+  stockWeight:   3.42,   // oz — weigh your raw block before any cuts
+
+  // --- Wheels & Axles ---
+  wheelDiameter:       1.18,  // inches — BSA official wheel OD
+  wheelWidth:          0.37,  // inches — BSA official wheel width
+  wheelAxleWeight:     0.49,  // oz — weigh all 4 wheels + 4 axles together
+  raisedWheelLift:     0.08,  // inches — extra lift when wheel is marked "raised"
+
+  // --- Axle Mounting ---
+  axleSlotHeight:      0.044, // inches — center of axle in kit slot (≈ flush with block bottom, half axle diameter)
+  drilledAxleHeight:   0.5,   // inches — default drill height from bottom (lower = more clearance)
+  drilledAxleHeightMin: 0.3,  // inches — minimum safe drill height
+  drilledAxleHeightMax: 0.75, // inches — maximum drill height (must stay within block)
+
+  // --- Axle Slot Positions ---
+  frontAxleFromFront:  1.75,  // inches — front axle slot measured from front of car
+  rearAxleFromBack:    1.0,   // inches — rear axle slot measured from back of car
+
+  // --- Competition Rules (Pack 3) ---
+  maxWeight:           5.0,   // oz — maximum total car weight
+  maxLength:           7.0,   // inches
+  maxWidth:            2.75,  // inches
+  minWidth:            1.75,  // inches — minimum width between wheels
+  minClearance:        0.375, // inches — minimum bottom clearance (⅜")
+
+  // --- Performance Targets ---
+  cogTargetFromRearAxle: 1.0, // inches — ideal CoG position in front of rear axle
+  cogToleranceGreen:     0.15,// inches — how close to target to show green
+
+  // --- Weight Gauge ---
+  warningThreshold:    0.2,   // oz below max — when gauge turns amber (e.g. 4.8 for 5.0 max)
+
+  // --- Default Axle Settings ---
+  defaultBend:   1.5,  // degrees
+  defaultCamber: 0,    // degrees
+
+  // --- Axle Presets ---
+  presets: {
+    rail:   { fl: { bend: 1.5, camber: 1.5, raised: true  }, fr: { bend: 1.5, camber: 1.5, raised: false }, rl: { bend: 1.5, camber: 1.5, raised: false }, rr: { bend: 1.5, camber: 1.5, raised: false } },
+    canted: { fl: { bend: 2.0, camber: 2.0, raised: false }, fr: { bend: 2.0, camber: 2.0, raised: false }, rl: { bend: 2.0, camber: 2.0, raised: false }, rr: { bend: 2.0, camber: 2.0, raised: false } },
+    stock:  { fl: { bend: 0,   camber: 0,   raised: false }, fr: { bend: 0,   camber: 0,   raised: false }, rl: { bend: 0,   camber: 0,   raised: false }, rr: { bend: 0,   camber: 0,   raised: false } },
+  },
+};
+// ═══════════════════════ END CONFIGURATION ═══════════════════════
+
+// ===== STATE =====
+const STATE_VERSION = 5; // bump to reset saved state when CONFIG changes
+const DEFAULTS = {
+  _v: STATE_VERSION,
+  body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: 0.45, frontHeight: 0.3 },
+  rawWoodWeight: CONFIG.stockWeight,
+  weights: [],
+  axles: {
+    fl: { bend: CONFIG.defaultBend, camber: CONFIG.defaultCamber, raised: false },
+    fr: { bend: CONFIG.defaultBend, camber: CONFIG.defaultCamber, raised: false },
+    rl: { bend: CONFIG.defaultBend, camber: CONFIG.defaultCamber, raised: false },
+    rr: { bend: CONFIG.defaultBend, camber: CONFIG.defaultCamber, raised: false },
+  },
+  axleMountType: 'slot',  // 'slot' = kit notches (bottom), 'drilled' = drilled holes (side)
+  drilledAxleHeight: CONFIG.drilledAxleHeight,
+  wheelAxleWeight: CONFIG.wheelAxleWeight,
+  maxWeight: CONFIG.maxWeight,
+  nextId: 1,
+};
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('pinewood-derby-state');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // If schema version changed, discard old state and use fresh defaults
+      if (parsed._v !== STATE_VERSION) {
+        localStorage.removeItem('pinewood-derby-state');
+      } else {
+        return { ...DEFAULTS, ...parsed, body: { ...DEFAULTS.body, ...(parsed.body || {}) }, axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) } };
+      }
+    }
+  } catch (e) { /* ignore corrupt data */ }
+  return { ...DEFAULTS, body: { ...DEFAULTS.body }, axles: { fl: { ...DEFAULTS.axles.fl }, fr: { ...DEFAULTS.axles.fr }, rl: { ...DEFAULTS.axles.rl }, rr: { ...DEFAULTS.axles.rr } }, weights: [] };
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('pinewood-derby-state', JSON.stringify(state));
+  } catch (e) { /* storage full or unavailable */ }
+}
+
+const state = loadState();
+
+// ===== THREE.JS SETUP =====
+const canvas = document.getElementById('three-canvas');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x12141c);
+
+// Fog for dramatic depth
+scene.fog = new THREE.FogExp2(0x12141c, 0.025);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+camera.position.set(6, 5, 8);
+camera.lookAt(0, 0, 0);
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+// Dramatic lighting — boosted for contrast
+const ambient = new THREE.AmbientLight(0x334466, 1.0);
+scene.add(ambient);
+
+// Hemisphere light for natural fill (sky blue above, warm below)
+const hemiLight = new THREE.HemisphereLight(0x6688cc, 0x443322, 0.5);
+scene.add(hemiLight);
+
+// Key light — dramatic warm
+const keyLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+keyLight.position.set(5, 8, 3);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.width = 2048;
+keyLight.shadow.mapSize.height = 2048;
+scene.add(keyLight);
+
+// Fill light — cool blue, stronger
+const fillLight = new THREE.DirectionalLight(0x6688cc, 0.6);
+fillLight.position.set(-5, 3, -3);
+scene.add(fillLight);
+
+// Rim light — red accent from behind
+const rimLight = new THREE.DirectionalLight(0xdc2626, 0.35);
+rimLight.position.set(-3, 2, -6);
+scene.add(rimLight);
+
+// Low front kick light to catch wheel faces
+const kickLight = new THREE.DirectionalLight(0x8899bb, 0.4);
+kickLight.position.set(0, 1, 8);
+scene.add(kickLight);
+
+// Spotlight from above for dramatic pool of light
+const spotLight = new THREE.SpotLight(0xffffff, 0.8, 30, Math.PI / 5, 0.4, 1);
+spotLight.position.set(0, 12, 0);
+spotLight.castShadow = true;
+scene.add(spotLight);
+
+// Ground — blueprint blue surface
+const groundGeo = new THREE.PlaneGeometry(30, 30);
+const groundMat = new THREE.MeshStandardMaterial({
+  color: 0x0c1a2e,
+  roughness: 0.5,
+  metalness: 0.4
+});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.5;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Blueprint grid lines
+const gridHelper = new THREE.GridHelper(14, 28, 0x1a3a5c, 0x122a48);
+gridHelper.position.y = -0.49;
+scene.add(gridHelper);
+
+// Track guide rail
+const railGeo = new THREE.BoxGeometry(10, 0.2, 0.1);
+const railMat = new THREE.MeshStandardMaterial({ color: 0x333340, metalness: 0.6, roughness: 0.4 });
+const rail = new THREE.Mesh(railGeo, railMat);
+rail.position.set(0, -0.45, 0);
+scene.add(rail);
+
+// Materials — upgraded
+const woodMat = new THREE.MeshStandardMaterial({
+  color: 0xc49a6c,
+  roughness: 0.7,
+  metalness: 0.05,
+});
+const wheelMat = new THREE.MeshStandardMaterial({
+  color: 0x2a2a35,
+  roughness: 0.35,
+  metalness: 0.4
+});
+const axleMat = new THREE.MeshStandardMaterial({
+  color: 0x999999,
+  metalness: 0.9,
+  roughness: 0.2
+});
+const weightColors = {
+  tungsten: 0xb8860b, tungsten_cylinder: 0xb8860b,
+  lead_strip: 0x888888, steel_bbs: 0x666680, custom: 0xdc2626
+};
+const cogMat = new THREE.MeshStandardMaterial({
+  color: 0xff0000,
+  emissive: 0xff0000,
+  emissiveIntensity: 0.8
+});
+
+// Groups
+const carGroup = new THREE.Group();
+scene.add(carGroup);
+let bodyMesh, cogMarker;
+const wheelMeshes = {};
+const axleMeshes = {};
+const weightMeshes = [];
+
+// Derived from CONFIG (recalculated in buildCar when length changes)
+let AXLE_FRONT_X = -(CONFIG.stockLength / 2 - CONFIG.frontAxleFromFront);
+let AXLE_REAR_X = CONFIG.stockLength / 2 - CONFIG.rearAxleFromBack;
+
+function getEffectiveAxleHeight() {
+  return state.axleMountType === 'drilled' ? state.drilledAxleHeight : CONFIG.axleSlotHeight;
+}
+
+function buildCar() {
+  while (carGroup.children.length) carGroup.remove(carGroup.children[0]);
+  weightMeshes.length = 0;
+
+  const { length, width, rearHeight, frontHeight } = state.body;
+  const halfL = length / 2, halfW = width / 2;
+
+  // Recalculate axle positions for current body length
+  AXLE_FRONT_X = -(halfL - CONFIG.frontAxleFromFront);
+  AXLE_REAR_X = halfL - CONFIG.rearAxleFromBack;
+
+  // Body
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfL, 0);
+  shape.lineTo(-halfL, frontHeight);
+  shape.lineTo(halfL, rearHeight);
+  shape.lineTo(halfL, 0);
+  shape.lineTo(-halfL, 0);
+
+  const extSettings = { depth: width, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 };
+  const bodyGeo = new THREE.ExtrudeGeometry(shape, extSettings);
+  bodyGeo.translate(0, 0, -halfW);
+  bodyMesh = new THREE.Mesh(bodyGeo, woodMat);
+  bodyMesh.castShadow = true;
+  bodyMesh.receiveShadow = true;
+  carGroup.add(bodyMesh);
+
+  // Wheels and axles
+  const wheelGeo = new THREE.CylinderGeometry(CONFIG.wheelDiameter / 2, CONFIG.wheelDiameter / 2, CONFIG.wheelWidth, 32);
+  const axleGeo = new THREE.CylinderGeometry(0.04, 0.04, width + 0.3, 8);
+
+  const ww = CONFIG.wheelWidth;
+  const positions = {
+    fl: { x: AXLE_FRONT_X, z: -halfW - ww / 2 - 0.05 },
+    fr: { x: AXLE_FRONT_X, z: halfW + ww / 2 + 0.05 },
+    rl: { x: AXLE_REAR_X, z: -halfW - ww / 2 - 0.05 },
+    rr: { x: AXLE_REAR_X, z: halfW + ww / 2 + 0.05 },
+  };
+
+  const effectiveAxleHeight = getEffectiveAxleHeight();
+
+  for (const [key, pos] of Object.entries(positions)) {
+    const ax = state.axles[key];
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.x = Math.PI / 2;
+    const axleHeightFromBottom = effectiveAxleHeight;
+    let wheelY = axleHeightFromBottom - CONFIG.wheelDiameter / 2;
+    if (ax.raised) wheelY += CONFIG.raisedWheelLift;
+    wheel.position.set(pos.x, wheelY + CONFIG.wheelDiameter / 2, pos.z);
+
+    if (pos.z < 0) wheel.rotation.y = THREE.MathUtils.degToRad(ax.camber);
+    else wheel.rotation.y = THREE.MathUtils.degToRad(-ax.camber);
+
+    if (ax.raised) {
+      wheel.material = wheelMat.clone();
+      wheel.material.transparent = true;
+      wheel.material.opacity = 0.35;
+    }
+
+    wheel.castShadow = true;
+    carGroup.add(wheel);
+    wheelMeshes[key] = wheel;
+  }
+
+  ['front', 'rear'].forEach(end => {
+    const x = end === 'front' ? AXLE_FRONT_X : AXLE_REAR_X;
+    const axle = new THREE.Mesh(axleGeo, axleMat);
+    axle.rotation.x = Math.PI / 2;
+    axle.position.set(x, effectiveAxleHeight, 0);
+    carGroup.add(axle);
+  });
+
+  // Weights
+  state.weights.forEach(w => {
+    const size = Math.pow(w.weight * 0.3, 1 / 3) * 0.6 || 0.2;
+    let geo;
+    if (w.type === 'tungsten_cylinder') {
+      geo = new THREE.CylinderGeometry(size / 2, size / 2, size, 16);
+    } else if (w.type === 'lead_strip') {
+      geo = new THREE.BoxGeometry(size * 2, size * 0.3, size);
+    } else if (w.type === 'steel_bbs') {
+      geo = new THREE.SphereGeometry(size / 2, 16, 16);
+    } else {
+      geo = new THREE.BoxGeometry(size, size, size);
+    }
+    const mat = new THREE.MeshStandardMaterial({
+      color: weightColors[w.type] || 0xdc2626,
+      metalness: 0.7, roughness: 0.2
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    const wx = w.x - halfL;
+    const heightAtWx = frontHeight + (rearHeight - frontHeight) * (w.x / length);
+    mesh.position.set(wx, heightAtWx + size / 2 + 0.01, w.y);
+    mesh.castShadow = true;
+    carGroup.add(mesh);
+    weightMeshes.push(mesh);
+  });
+
+  // CoG target marker (green ring — where you WANT the CoG)
+  const cogTargetX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
+  const targetHeightAtX = frontHeight + (rearHeight - frontHeight) * ((cogTargetX + halfL) / length);
+  const targetRingGeo = new THREE.TorusGeometry(0.12, 0.02, 8, 24);
+  const targetRingMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.4 });
+  const targetRing = new THREE.Mesh(targetRingGeo, targetRingMat);
+  targetRing.rotation.x = Math.PI / 2;
+  targetRing.position.set(cogTargetX, targetHeightAtX + 0.15, 0);
+  carGroup.add(targetRing);
+
+  // CoG actual marker (red sphere)
+  const cog = calculateCoG();
+  const cogGeo = new THREE.SphereGeometry(0.08, 16, 16);
+  cogMarker = new THREE.Mesh(cogGeo, cogMat);
+  const cogHeightAtX = frontHeight + (rearHeight - frontHeight) * ((cog.x + halfL) / length);
+  cogMarker.position.set(cog.x, cogHeightAtX + 0.15, cog.z);
+  carGroup.add(cogMarker);
+
+  const lowestWheel = Math.min(...Object.values(wheelMeshes).map(w => w.position.y - CONFIG.wheelDiameter / 2));
+  carGroup.position.y = -lowestWheel - 0.4;
+
+  // Update model spec label
+  document.getElementById('model-spec').textContent =
+    `${length.toFixed(2)} × ${width.toFixed(2)} × ${Math.max(rearHeight, frontHeight).toFixed(2)} in`;
+}
+
+function calculateCoG() {
+  const { length, width, rearHeight, frontHeight } = state.body;
+  const halfL = length / 2;
+
+  // --- Wood body centroid ---
+  // Side profile is a trapezoid: front height (a) and rear height (b) over length L.
+  // Centroid of a trapezoid measured from the "a" (front) side:
+  //   x = L/3 * (a + 2b) / (a + b)
+  // This gives distance from front of car, then convert to centered coords.
+  const a = frontHeight, b = rearHeight;
+  const woodWeight = estimateWoodWeight();
+  let woodCogFromFront;
+  if (a + b > 0) {
+    woodCogFromFront = (length / 3) * (a + 2 * b) / (a + b);
+  } else {
+    woodCogFromFront = length / 2; // flat: centroid at middle
+  }
+  const woodCogX = woodCogFromFront - halfL; // convert to centered coords
+
+  let totalWeight = woodWeight;
+  let sumX = woodCogX * woodWeight;
+  let sumZ = 0;
+
+  // --- Wheels + Axles ---
+  // Split evenly between front and rear axle positions
+  const perAxleWeight = state.wheelAxleWeight / 2;
+  totalWeight += state.wheelAxleWeight;
+  sumX += AXLE_FRONT_X * perAxleWeight;
+  sumX += AXLE_REAR_X * perAxleWeight;
+  // Wheels are centered laterally, so no Z contribution
+
+  // --- Added weights ---
+  state.weights.forEach(w => {
+    const wx = w.x - halfL;
+    sumX += wx * w.weight;
+    sumZ += w.y * w.weight;
+    totalWeight += w.weight;
+  });
+
+  return {
+    x: totalWeight > 0 ? sumX / totalWeight : 0,
+    y: 0,
+    z: totalWeight > 0 ? sumZ / totalWeight : 0
+  };
+}
+
+function estimateWoodWeight() {
+  const { length, width, rearHeight, frontHeight } = state.body;
+  const stockVolume = CONFIG.stockLength * CONFIG.stockWidth * CONFIG.stockHeight;
+  const cutVolume = length * width * (rearHeight + frontHeight) / 2;
+  const ratio = cutVolume / stockVolume;
+  return state.rawWoodWeight * ratio;
+}
+
+// ===== ORBIT CONTROLS =====
+let isDragging = false, prevMouse = { x: 0, y: 0 };
+let spherical = { theta: 0.8, phi: 1.0, radius: 12 };
+let targetSpherical = { ...spherical };
+let autoRotate = false;
+
+function updateCameraFromSpherical() {
+  camera.position.x = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.position.y = spherical.radius * Math.cos(spherical.phi);
+  camera.position.z = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  camera.lookAt(0, 0, 0);
+}
+updateCameraFromSpherical();
+
+canvas.addEventListener('pointerdown', e => {
+  isDragging = true;
+  autoRotate = false;
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('pointerup', () => isDragging = false);
+canvas.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+  spherical.theta -= dx * 0.008;
+  spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi + dy * 0.008));
+  prevMouse = { x: e.clientX, y: e.clientY };
+  updateCameraFromSpherical();
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  spherical.radius = Math.max(4, Math.min(25, spherical.radius + e.deltaY * 0.01));
+  updateCameraFromSpherical();
+}, { passive: false });
+
+function resetCamera() {
+  spherical = { theta: 0.8, phi: 1.0, radius: 12 };
+  updateCameraFromSpherical();
+}
+function toggleSpin() {
+  autoRotate = !autoRotate;
+  const btn = document.getElementById('spin-btn');
+  btn.style.borderColor = autoRotate ? 'var(--green)' : '';
+  btn.style.color = autoRotate ? 'var(--green)' : '';
+}
+function setView(view) {
+  autoRotate = false;
+  if (view === 'top') { spherical = { theta: 0, phi: 0.1, radius: 10 }; }
+  else if (view === 'side') { spherical = { theta: 0, phi: Math.PI / 2, radius: 10 }; }
+  else if (view === 'front') { spherical = { theta: Math.PI / 2, phi: Math.PI / 2, radius: 10 }; }
+  updateCameraFromSpherical();
+}
+
+// ===== UI UPDATES =====
+function updateBody(prop, val) {
+  state.body[prop] = parseFloat(val);
+  document.getElementById('val-' + prop).textContent = parseFloat(val).toFixed(2) + '"';
+  rebuildAll();
+}
+
+function updateWoodWeight() {
+  state.rawWoodWeight = parseFloat(document.getElementById('raw-wood-weight').value) || 0;
+  rebuildAll();
+}
+
+function updateAxle(wheel, prop, val) {
+  if (prop === 'raised') state.axles[wheel][prop] = val;
+  else state.axles[wheel][prop] = parseFloat(val);
+  const dispId = `ax-${wheel}-${prop}`;
+  const el = document.getElementById(dispId);
+  if (el && prop !== 'raised') el.textContent = parseFloat(val).toFixed(1) + '°';
+  rebuildAll();
+}
+
+function applyAxlePreset(preset) {
+  const p = CONFIG.presets[preset];
+  if (p) {
+    state.axles = {
+      fl: { ...p.fl },
+      fr: { ...p.fr },
+      rl: { ...p.rl },
+      rr: { ...p.rr },
+    };
+  }
+  for (const [key, ax] of Object.entries(state.axles)) {
+    const bendEl = document.getElementById(`ax-${key}-bend`);
+    const camberEl = document.getElementById(`ax-${key}-camber`);
+    const raisedEl = document.getElementById(`ax-${key}-raised`);
+    if (bendEl) bendEl.textContent = ax.bend.toFixed(1) + '°';
+    if (camberEl) camberEl.textContent = ax.camber.toFixed(1) + '°';
+    if (raisedEl) raisedEl.checked = ax.raised;
+    const parent = (bendEl || {}).closest && bendEl.closest('.axle-wheel');
+    if (parent) {
+      const sliders = parent.querySelectorAll('input[type="range"]');
+      if (sliders[0]) sliders[0].value = ax.bend;
+      if (sliders[1]) sliders[1].value = ax.camber;
+    }
+  }
+  rebuildAll();
+}
+
+function toggleAddForm() {
+  document.getElementById('add-form').classList.toggle('show');
+}
+
+function addWeight() {
+  const name = document.getElementById('wf-name').value || ('Weight ' + state.nextId);
+  const type = document.getElementById('wf-type').value;
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const x = parseFloat(document.getElementById('wf-x').value);
+  const y = parseFloat(document.getElementById('wf-y').value);
+  state.weights.push({ id: state.nextId++, name, type, weight, x, y });
+  document.getElementById('wf-name').value = '';
+  toggleAddForm();
+  rebuildAll();
+}
+
+function removeWeight(id) {
+  state.weights = state.weights.filter(w => w.id !== id);
+  rebuildAll();
+}
+
+function renderWeightList() {
+  const list = document.getElementById('weight-list');
+  if (state.weights.length === 0) {
+    list.innerHTML = '<p style="font-family:\'Share Tech Mono\',monospace;font-size:0.72rem;color:var(--text-muted);padding:12px 0;letter-spacing:0.5px;">No weights added. Click "+ Add Weight" to begin.</p>';
+    return;
+  }
+  list.innerHTML = state.weights.map((w, i) => `
+    <div class="weight-item" style="animation-delay:${i * 0.05}s">
+      <div class="info">
+        <span class="name">${w.name}</span>
+        <span class="detail">${w.type.replace('_', ' ')} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="removeWeight(${w.id})">DEL</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateWeightDisplay() {
+  const woodWt = estimateWoodWeight();
+  const addedWt = state.weights.reduce((s, w) => s + w.weight, 0);
+  const total = woodWt + addedWt + state.wheelAxleWeight;
+  const remaining = state.maxWeight - total;
+  const pct = Math.min(100, (total / state.maxWeight) * 100);
+
+  // Weight gauge
+  const weightVal = document.getElementById('weight-text');
+  weightVal.innerHTML = `${total.toFixed(2)}<span style="font-size:0.9rem;color:var(--text-dim)"> / ${state.maxWeight.toFixed(2)} oz</span>`;
+
+  const fill = document.getElementById('weight-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = total > state.maxWeight
+    ? 'linear-gradient(90deg, var(--race-red), #ff4444)'
+    : total > (state.maxWeight - CONFIG.warningThreshold)
+      ? 'linear-gradient(90deg, var(--amber-dim), var(--amber))'
+      : 'linear-gradient(90deg, var(--green-dim), var(--green))';
+
+  // Status light
+  const light = document.getElementById('status-light');
+  light.className = 'status-light';
+  if (total > state.maxWeight) light.classList.add('danger');
+  else if (total > (state.maxWeight - CONFIG.warningThreshold)) light.classList.add('warning');
+
+  document.getElementById('val-cut-weight').textContent = woodWt.toFixed(2) + ' oz';
+  document.getElementById('val-removed').textContent = (state.rawWoodWeight - woodWt).toFixed(2) + ' oz';
+  document.getElementById('wt-wood').textContent = woodWt.toFixed(2) + ' oz';
+  document.getElementById('wt-added').textContent = addedWt.toFixed(2) + ' oz';
+  document.getElementById('wt-total').textContent = total.toFixed(2) + ' oz';
+  document.getElementById('wt-total').style.color = total > state.maxWeight ? 'var(--race-red)' : 'var(--green)';
+  document.getElementById('wt-remaining').textContent = remaining >= 0 ? remaining.toFixed(2) + ' oz' : 'OVER by ' + Math.abs(remaining).toFixed(2) + ' oz';
+  document.getElementById('wt-remaining').style.color = remaining >= 0 ? 'var(--amber)' : 'var(--race-red)';
+
+  const cog = calculateCoG();
+  const halfL = state.body.length / 2;
+  // Distance from rear axle (positive = in front of rear axle)
+  const fromRearAxle = AXLE_REAR_X - cog.x;
+  const cogTargetFromRearAxle = CONFIG.cogTargetFromRearAxle;
+  const cogDelta = fromRearAxle - cogTargetFromRearAxle;
+
+  document.getElementById('cog-display').textContent = `${fromRearAxle.toFixed(2)}" fwd of rear axle // ${cog.z >= 0 ? 'R' : 'L'} ${Math.abs(cog.z).toFixed(1)}"`;
+
+  const targetEl = document.getElementById('cog-target-display');
+  targetEl.textContent = `${cogTargetFromRearAxle.toFixed(2)}" fwd of rear axle`;
+  if (Math.abs(cogDelta) < CONFIG.cogToleranceGreen) {
+    targetEl.style.color = 'var(--green)';
+  } else {
+    targetEl.style.color = 'var(--amber)';
+  }
+
+  document.getElementById('dim-l').textContent = state.body.length.toFixed(2) + '"';
+  document.getElementById('dim-w').textContent = state.body.width.toFixed(2) + '"';
+  document.getElementById('dim-h').textContent = Math.max(state.body.rearHeight, state.body.frontHeight).toFixed(2) + '"';
+  // Ground clearance: wheel bottom on ground, axle center at wheelRadius above ground,
+  // block bottom at (wheelRadius - axleHeight) above ground
+  const effAxleH = getEffectiveAxleHeight();
+  const groundClearance = CONFIG.wheelDiameter / 2 - effAxleH;
+  document.getElementById('dim-c').textContent = '~' + groundClearance.toFixed(2) + '"';
+}
+
+function updateRules() {
+  const { length, width, rearHeight, frontHeight } = state.body;
+  const total = estimateWoodWeight() + state.weights.reduce((s, w) => s + w.weight, 0) + state.wheelAxleWeight;
+  const clearance = CONFIG.wheelDiameter / 2 - getEffectiveAxleHeight();
+
+  const rules = [
+    { pass: length <= CONFIG.maxLength, text: `Length ≤ ${CONFIG.maxLength}" — current: ${length.toFixed(2)}"` },
+    { pass: width <= CONFIG.maxWidth, text: `Width ≤ ${CONFIG.maxWidth}" — current: ${width.toFixed(2)}"` },
+    { pass: width >= CONFIG.minWidth, text: `Width between wheels ≥ ${CONFIG.minWidth}" — current: ${width.toFixed(2)}"` },
+    { pass: total <= CONFIG.maxWeight, text: `Weight ≤ ${CONFIG.maxWeight} oz — current: ${total.toFixed(2)} oz` },
+    { pass: clearance >= CONFIG.minClearance, text: `Bottom clearance ≥ ${CONFIG.minClearance}" — est: ${clearance.toFixed(3)}"` },
+    { pass: true, text: 'Front does not project past starting post' },
+    { pass: length <= CONFIG.maxLength, text: `No decorations past ${CONFIG.maxLength}" overall length` },
+    { pass: true, text: 'Using Pack 3 supplied wood block, axles & wheels' },
+  ];
+
+  document.getElementById('rules-list').innerHTML = rules.map((r, i) => `
+    <div class="rule-item ${r.pass ? 'rule-pass' : 'rule-fail'}" style="animation-delay:${i * 0.06}s">
+      <span class="rule-icon">${r.pass ? 'P' : 'F'}</span>
+      <span class="rule-text">${r.text}</span>
+    </div>
+  `).join('');
+}
+
+function updateWheelAxleWeight() {
+  state.wheelAxleWeight = parseFloat(document.getElementById('wheel-axle-weight').value) || 0;
+  rebuildAll();
+}
+
+function updateAxleMountType(type) {
+  state.axleMountType = type;
+  document.getElementById('drilled-options').style.display = type === 'drilled' ? 'block' : 'none';
+  document.getElementById('slot-info').style.display = type === 'slot' ? 'block' : 'none';
+  rebuildAll();
+}
+
+function updateDrilledHeight(val) {
+  state.drilledAxleHeight = parseFloat(val);
+  document.getElementById('val-drilled-height').textContent = parseFloat(val).toFixed(3) + '"';
+  rebuildAll();
+}
+
+function rebuildAll() {
+  buildCar();
+  renderWeightList();
+  updateWeightDisplay();
+  updateRules();
+  saveState();
+}
+
+// ===== TABS =====
+function switchTab(name, btn) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ===== RENDER LOOP =====
+let time = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  time += 0.016;
+
+  const rect = canvas.parentElement.getBoundingClientRect();
+  if (canvas.width !== rect.width || canvas.height !== rect.height) {
+    renderer.setSize(rect.width, rect.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+
+  // Gentle auto-rotate
+  if (autoRotate) {
+    spherical.theta += 0.002;
+    updateCameraFromSpherical();
+  }
+
+  // Pulsing CoG marker
+  if (cogMarker) {
+    cogMarker.material.emissiveIntensity = 0.5 + Math.sin(time * 3) * 0.3;
+  }
+
+  renderer.render(scene, camera);
+}
+
+// ===== INIT =====
+// Restore saved state into UI inputs
+function restoreUI() {
+  // Body sliders
+  const bodySliders = {
+    length: document.querySelector('#tab-body input[type="range"][oninput*="length"]'),
+    width: document.querySelector('#tab-body input[type="range"][oninput*="width"]'),
+    rearHeight: document.querySelector('#tab-body input[type="range"][oninput*="rearHeight"]'),
+    frontHeight: document.querySelector('#tab-body input[type="range"][oninput*="frontHeight"]'),
+  };
+  for (const [key, slider] of Object.entries(bodySliders)) {
+    if (slider) {
+      slider.value = state.body[key];
+      const valEl = document.getElementById('val-' + key);
+      if (valEl) valEl.textContent = state.body[key].toFixed(2) + '"';
+    }
+  }
+
+  // Raw wood weight
+  document.getElementById('raw-wood-weight').value = state.rawWoodWeight.toFixed(2);
+
+  // Wheel + Axle weight
+  document.getElementById('wheel-axle-weight').value = state.wheelAxleWeight.toFixed(2);
+
+  // Axle mount type
+  document.getElementById('axle-mount-type').value = state.axleMountType;
+  document.getElementById('drilled-options').style.display = state.axleMountType === 'drilled' ? 'block' : 'none';
+  document.getElementById('slot-info').style.display = state.axleMountType === 'slot' ? 'block' : 'none';
+  document.getElementById('drilled-height-slider').value = state.drilledAxleHeight;
+  document.getElementById('val-drilled-height').textContent = state.drilledAxleHeight.toFixed(3) + '"';
+  document.getElementById('val-slot-height').textContent = CONFIG.axleSlotHeight.toFixed(3) + '"';
+
+  // Axle controls
+  for (const [key, ax] of Object.entries(state.axles)) {
+    const bendEl = document.getElementById(`ax-${key}-bend`);
+    const camberEl = document.getElementById(`ax-${key}-camber`);
+    const raisedEl = document.getElementById(`ax-${key}-raised`);
+    if (bendEl) bendEl.textContent = ax.bend.toFixed(1) + '°';
+    if (camberEl) camberEl.textContent = ax.camber.toFixed(1) + '°';
+    if (raisedEl) raisedEl.checked = ax.raised;
+    const parent = bendEl && bendEl.closest('.axle-wheel');
+    if (parent) {
+      const sliders = parent.querySelectorAll('input[type="range"]');
+      if (sliders[0]) sliders[0].value = ax.bend;
+      if (sliders[1]) sliders[1].value = ax.camber;
+    }
+  }
+}
+restoreUI();
+rebuildAll();
+animate();
+</script>
+</body>
+</html>
