@@ -1,0 +1,41 @@
+{
+  "_v": 7,
+  "body": {
+    "length": 7,
+    "width": 1.75,
+    "rearHeight": 0.4,
+    "frontHeight": 0.25,
+    "noseHeight": 0.1,
+    "scoopDepth": 0.15
+  },
+  "rawWoodWeight": 3.42,
+  "weights": [],
+  "axles": {
+    "fl": {
+      "bend": 1.5,
+      "camber": 0,
+      "raised": false
+    },
+    "fr": {
+      "bend": 1.5,
+      "camber": 0,
+      "raised": false
+    },
+    "rl": {
+      "bend": 1.5,
+      "camber": 0,
+      "raised": false
+    },
+    "rr": {
+      "bend": 1.5,
+      "camber": 0,
+      "raised": false
+    }
+  },
+  "axleMountType": "slot",
+  "drilledAxleHeight": 0.5,
+  "wheelAxleWeight": 0.49,
+  "maxWeight": 5,
+  "configName": "Scoop",
+  "nextId": 1
+}

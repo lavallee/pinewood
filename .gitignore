@@ -1,2 +1,4 @@
 .playwright-mcp
 *.png
+*.JPG
+.vercel

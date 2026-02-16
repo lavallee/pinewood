@@ -1,0 +1,49 @@
+Bambu A1 Tool Plans
+====================
+
+All tools designed for Bambu A1 build volume (256 x 256 x 256mm).
+Use Bambu Studio with 0.4mm nozzle.
+
+
+Axle Bender Jig
+----------------
+Precision jig for bending BSA axles to exact angles. Features a protractor
+scale and pin vise slot. Print in PLA at 0.16mm layer height for accuracy.
+
+  Size:     40 x 25 x 15mm
+  Infill:   80%
+  Time:     ~25 min
+  Material: PLA
+
+
+Wheel Alignment Gauge
+----------------------
+Slides over the car body to check wheel alignment and camber. Two rails
+reference the body sides while indicator arms touch the wheel face.
+
+  Size:     80 x 75 x 20mm
+  Infill:   40%
+  Time:     ~45 min
+  Material: PLA
+
+
+Weight Placement Template
+--------------------------
+Custom template matching your car body profile. Drop-in pockets for tungsten
+cubes positioned at the calculated optimal CoG location.
+
+  Size:     Custom to car
+  Infill:   20%
+  Time:     ~35 min
+  Material: PLA
+
+
+Axle Slot Guide
+----------------
+Clamp-on drill guide that ensures axle slots are perfectly straight and at
+the correct height. Fits over the stock BSA block.
+
+  Size:     50 x 45 x 30mm
+  Infill:   60%
+  Time:     ~40 min
+  Material: PLA

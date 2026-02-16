@@ -215,6 +215,28 @@
   .status-light.warning { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
   .status-light.danger { background: var(--race-red); box-shadow: 0 0 6px var(--race-red); }
 
+  .header-cog {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 20px;
+    border-left: 1px solid var(--border);
+  }
+  .header-cog-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .header-cog-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: var(--amber);
+    white-space: nowrap;
+  }
+
   /* ======== VIEWPORT ======== */
   #viewport {
     position: relative;
@@ -241,7 +263,7 @@
     z-index: 2;
   }
 
-  #three-canvas { width: 100%; height: 100%; display: block; }
+  #three-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 
   /* Scanline overlay */
   .scan-overlay {
@@ -274,30 +296,45 @@
   .hud-bracket.bl { bottom: 12px; left: 12px; border-bottom: 2px solid var(--race-red); border-left: 2px solid var(--race-red); }
   .hud-bracket.br { bottom: 12px; right: 12px; border-bottom: 2px solid var(--race-red); border-right: 2px solid var(--race-red); }
 
-  .cog-indicator {
+  .view-mode-toggle {
     position: absolute;
     top: 16px;
     left: 40px;
     z-index: 5;
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(8px);
-    padding: 8px 14px;
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--amber);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 1px;
-    animation: hud-flicker 8s infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
   }
-  .cog-indicator .label {
+  .view-mode-toggle .view-mode-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.55rem;
     color: var(--text-dim);
-    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding-left: 2px;
+  }
+  .view-mode-toggle button {
+    background: rgba(220,38,38,0.15);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--race-red-dim);
+    color: var(--race-red);
+    padding: 8px 18px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
-    display: block;
-    margin-bottom: 2px;
+    transition: all 0.2s;
+    text-shadow: 0 0 8px rgba(220,38,38,0.4);
   }
-  .cog-indicator span { color: var(--amber); }
+  .view-mode-toggle button:hover {
+    color: #fff;
+    border-color: var(--race-red);
+    background: rgba(220,38,38,0.25);
+    box-shadow: 0 0 12px rgba(220,38,38,0.3);
+  }
 
   .viewport-overlay {
     position: absolute;
@@ -378,10 +415,10 @@
     padding: 14px 4px 12px;
     background: none;
     border: none;
-    color: var(--text-muted);
+    color: var(--text-dim);
     cursor: pointer;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -389,9 +426,11 @@
     transition: all 0.25s;
     position: relative;
   }
+  .tabs button:hover { color: var(--text); }
   .tabs button.active {
-    color: var(--race-red);
+    color: #fff;
     border-bottom-color: var(--race-red);
+    background: rgba(220,38,38,0.06);
   }
   .tabs button.active::after {
     content: '';
@@ -404,8 +443,6 @@
     background: var(--race-red);
     box-shadow: 0 0 10px var(--race-red), 0 0 20px rgba(220,38,38,0.3);
   }
-  .tabs button:hover { color: var(--text-dim); }
-
   .tab-content { padding: 16px; display: none; }
   .tab-content.active {
     display: block;
@@ -808,10 +845,387 @@
     letter-spacing: 1px;
   }
 
-  /* Responsive */
+  /* ======== DESIGNS MODAL ======== */
+  .designs-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .designs-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .designs-modal {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--race-red);
+    border-radius: 8px;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    transform: translateY(10px);
+    transition: transform 0.2s ease;
+  }
+  .designs-backdrop.open .designs-modal {
+    transform: translateY(0);
+  }
+  .designs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .designs-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 2px;
+    color: var(--text);
+    font-weight: 400;
+  }
+  .designs-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .designs-close:hover { color: var(--text); border-color: var(--border-light); }
+  .designs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    min-height: 80px;
+  }
+  .design-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    margin: 4px 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .design-item:hover { background: var(--bg-card-hover); border-color: var(--border-light); }
+  .design-item.active { border-left-color: var(--green); }
+  .design-item-info { flex: 1; min-width: 0; }
+  .design-item-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .design-item-meta {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    font-family: 'Share Tech Mono', monospace;
+    margin-top: 2px;
+  }
+  .design-item-delete {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .design-item-delete:hover { color: var(--race-red); border-color: var(--race-red-dim); }
+  .designs-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+  .designs-empty span { display: block; font-size: 1.5rem; margin-bottom: 8px; }
+  .designs-footer {
+    display: flex;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .designs-footer button {
+    flex: 1;
+    min-width: 80px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .designs-footer button:hover { color: var(--text); border-color: var(--border-light); background: var(--bg-card-hover); }
+  .save-flash {
+    transition: color 0.3s, border-color 0.3s;
+  }
+  .save-flash.saved {
+    color: var(--green) !important;
+    border-color: var(--green) !important;
+  }
+
+  /* Rules footer link */
+  .rules-footer {
+    padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-deep);
+    z-index: 10;
+  }
+  .rules-footer button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 4px 12px;
+    transition: color 0.2s;
+  }
+  .rules-footer button:hover { color: var(--text-dim); }
+  .rules-footer .rules-status {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .rules-footer .rules-status.pass { background: var(--green); box-shadow: 0 0 4px var(--green); }
+  .rules-footer .rules-status.fail { background: var(--race-red); box-shadow: 0 0 4px var(--race-red); }
+
+  /* ======== RESPONSIVE ======== */
+
+  /* Tablet breakpoint */
   @media (max-width: 900px) {
-    #app { grid-template-columns: 1fr; grid-template-rows: auto 50vh 1fr; }
+    body { overflow: auto; height: auto; }
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 50vh 1fr;
+      height: auto;
+      min-height: 100vh;
+    }
     #panel { border-left: none; border-top: 1px solid var(--border); }
+    input[type="range"] { width: 200px; }
+  }
+
+  /* Mobile breakpoint */
+  @media (max-width: 600px) {
+    body { overflow: auto; height: auto; }
+    #app {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 44vh 1fr;
+      height: auto;
+      min-height: 100vh;
+    }
+
+    /* Header — compact single-line layout */
+    header {
+      height: auto;
+      min-height: 40px;
+      padding: 6px 12px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .header-left { gap: 8px; }
+    .header-flag { width: 20px; height: 20px; }
+    header h1 { font-size: 1.1rem; letter-spacing: 2px; }
+    header h1 .dim { display: inline; font-size: 0.5rem; letter-spacing: 1px; margin-top: 0; margin-left: 4px; }
+    .speed-lines { display: none; }
+    .header-telemetry { width: 100%; flex-wrap: nowrap; gap: 0; align-items: center; }
+    .weight-gauge { flex: 1; gap: 6px; min-width: 0; }
+    .weight-gauge-bar { display: none; }
+    .header-cog { flex: 1; padding-left: 10px; border-left: 1px solid var(--border); border-top: none; padding-top: 0; width: auto; min-width: 0; }
+    .header-cog-label { font-size: 0.5rem; letter-spacing: 1px; }
+    .header-cog-value { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; }
+    .weight-gauge-label { font-size: 0.5rem; letter-spacing: 1px; }
+    .weight-gauge-value { font-size: 1rem; min-width: auto; }
+
+    /* Viewport HUD — tighter positioning */
+    .view-mode-toggle { top: 8px; left: 8px; }
+    .view-mode-toggle .view-mode-label { font-size: 0.48rem; }
+    .view-mode-toggle button { padding: 5px 10px; font-size: 0.62rem; letter-spacing: 1px; }
+    .viewport-model-label { top: 8px; right: 8px; }
+    .viewport-model-label .model-name { font-size: 0.85rem; letter-spacing: 2px; }
+    .viewport-model-label .model-spec { font-size: 0.5rem; }
+    .hud-bracket { width: 14px; height: 14px; }
+    .hud-bracket.tl { top: 6px; left: 6px; }
+    .hud-bracket.tr { top: 6px; right: 6px; }
+    .hud-bracket.bl { bottom: 6px; left: 6px; }
+    .hud-bracket.br { bottom: 6px; right: 6px; }
+
+    /* Viewport buttons — wrap into rows */
+    .viewport-overlay {
+      bottom: 6px;
+      left: 6px;
+      right: 6px;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .viewport-overlay button {
+      padding: 8px 10px;
+      font-size: 0.62rem;
+      letter-spacing: 1px;
+    }
+
+    /* Tabs — slightly smaller */
+    .tabs button {
+      padding: 12px 2px 10px;
+      font-size: 0.62rem;
+      letter-spacing: 1px;
+    }
+
+    /* Panel content */
+    #panel { border-left: none; border-top: 1px solid var(--border); }
+    .tab-content { padding: 12px; }
+
+    /* Sliders — wider and more touch-friendly */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      flex: 1;
+      margin: 0 10px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      width: 22px;
+      height: 22px;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* Control rows — label above, slider full width */
+    .control-row {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .control-row label {
+      flex: 0 0 auto;
+      font-size: 0.75rem;
+    }
+    .control-row .value {
+      min-width: 50px;
+      font-size: 0.75rem;
+    }
+
+    /* Form inputs — touch-friendly */
+    input[type="number"] {
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      width: 80px;
+    }
+    select {
+      font-size: 0.85rem;
+      padding: 8px 10px;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+    .checkbox-row label { font-size: 0.8rem; }
+
+    /* Buttons — larger tap targets */
+    .btn { padding: 10px 16px; font-size: 0.82rem; }
+    .btn-sm { padding: 8px 12px; font-size: 0.72rem; }
+    .preset-btns { gap: 4px; }
+    .preset-btns .btn { padding: 8px 10px; font-size: 0.7rem; }
+
+    /* Weight items — touch-friendly */
+    .weight-item { padding: 12px; }
+    .weight-item .actions { gap: 6px; }
+    .weight-item .actions .btn-sm {
+      padding: 8px 12px;
+      min-width: 36px;
+    }
+
+    /* Axle cards */
+    .axle-wheel { padding: 12px 12px 12px 14px; }
+
+    /* Designs modal — full-width on mobile */
+    .designs-modal {
+      width: 100%;
+      max-width: 100vw;
+      max-height: 90vh;
+      border-radius: 8px 8px 0 0;
+      margin-top: auto;
+    }
+    .designs-backdrop {
+      align-items: flex-end;
+    }
+    .designs-backdrop.open .designs-modal {
+      transform: translateY(0);
+    }
+    .designs-modal {
+      transform: translateY(100%);
+    }
+    .designs-header { padding: 14px 16px; }
+    .designs-header h2 { font-size: 1.1rem; }
+    .designs-list { padding: 6px 10px; }
+    .design-item { padding: 12px; }
+    .design-item-delete {
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    .designs-footer {
+      padding: 12px 16px 20px;
+      gap: 6px;
+    }
+    .designs-footer button {
+      padding: 12px 10px;
+      font-size: 0.8rem;
+      min-width: 70px;
+    }
+
+    /* Print cards */
+    .print-card { padding: 12px; }
+    .print-card:hover { transform: none; }
+
+    /* Alignment notes */
+    .alignment-note { font-size: 0.78rem; padding: 12px; }
+  }
+
+  /* Very small screens */
+  @media (max-width: 380px) {
+    header h1 { font-size: 0.95rem; }
+    header h1 .dim { font-size: 0.45rem; }
+    .weight-gauge-value { font-size: 0.9rem; }
+    .header-cog-value { font-size: 0.75rem; }
+    .viewport-overlay button { padding: 7px 8px; font-size: 0.58rem; }
+    .tabs button { font-size: 0.58rem; letter-spacing: 0.5px; }
   }
 </style>
 </head>
@@ -822,7 +1236,7 @@
       <div class="header-flag"><div></div><div></div><div></div><div></div></div>
       <h1>
         PINEWOOD <span class="red">DERBY</span>
-        <span class="dim">// Race Engineering Lab v2.0</span>
+        <span class="dim">// Race Engineering Lab</span>
       </h1>
     </div>
     <div class="speed-lines">
@@ -843,6 +1257,13 @@
         </div>
         <div class="status-light" id="status-light"></div>
       </div>
+      <div class="header-cog">
+        <div>
+          <div class="header-cog-label">Center of Gravity</div>
+          <div class="header-cog-value" id="header-cog-text">—</div>
+        </div>
+        <div class="status-light" id="cog-status-light"></div>
+      </div>
     </div>
   </header>
 
@@ -853,28 +1274,42 @@
     <div class="hud-bracket tr"></div>
     <div class="hud-bracket bl"></div>
     <div class="hud-bracket br"></div>
-    <div class="cog-indicator">
-      <span class="label">Center of Gravity</span>
-      <span id="cog-display">—</span>
-      <span class="label" style="margin-top:4px;">Target</span>
-      <span id="cog-target-display" style="color:var(--green)">—</span>
-    </div>
-    <div class="viewport-model-label">
+    <div class="viewport-model-label" onclick="openDesignsModal()" style="cursor:pointer">
       <div class="model-name" id="config-name-display">BSA BLOCK</div>
       <div class="model-spec" id="model-spec">7.00 × 1.75 × 0.45 in</div>
+    </div>
+    <div class="view-mode-toggle" id="view-mode-toggle">
+      <span class="view-mode-label" id="view-mode-label">FULL</span>
+      <button id="view-mode-btn" onclick="cycleViewMode()">X-RAY</button>
     </div>
     <div class="viewport-overlay">
       <button onclick="resetCamera()">Reset</button>
       <button onclick="setView('top')">Top</button>
       <button onclick="setView('side')">Side</button>
       <button onclick="setView('front')">Front</button>
-      <button onclick="toggleSpin()" id="spin-btn">Spin</button>
-      <button onclick="toggleXRay()" id="xray-btn">X-Ray</button>
-      <button onclick="toggleCutaway()" id="cutaway-btn">Cutaway</button>
-      <button onclick="saveConfigToFile()" style="margin-left:12px;border-left:1px solid var(--border-light);padding-left:14px;">Save</button>
-      <button onclick="document.getElementById('file-input').click()">Load</button>
+      <button onclick="toggleRotate()" id="rotate-btn">Rotate</button>
     </div>
-    <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadConfigFromFile(this)">
+    <input type="file" id="file-input" accept=".json" style="display:none" onchange="importDesignFromFile(this)">
+  </div>
+
+  <!-- Designs Modal -->
+  <div class="designs-backdrop" id="designs-backdrop" onclick="if(event.target===this)closeDesignsModal()">
+    <div class="designs-modal">
+      <div class="designs-header">
+        <h2>SAVED DESIGNS</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="save-btn" class="save-flash" onclick="quickSave()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.85rem;padding:4px 12px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.15s;">Save</button>
+          <button class="designs-close" onclick="closeDesignsModal()">&times;</button>
+        </div>
+      </div>
+      <div class="designs-list" id="designs-list"></div>
+      <div class="designs-footer">
+        <button onclick="saveAsNewDesign()">Save As&hellip;</button>
+        <button onclick="newDesign()">New</button>
+        <button onclick="document.getElementById('file-input').click()">Import</button>
+        <button onclick="exportCurrentDesign()">Export</button>
+      </div>
+    </div>
   </div>
 
   <div id="panel">
@@ -882,8 +1317,6 @@
       <button class="active" onclick="switchTab('body', this)">Body</button>
       <button onclick="switchTab('weights', this)">Weights</button>
       <button onclick="switchTab('axles', this)">Axles</button>
-      <button onclick="switchTab('rules', this)">Rules</button>
-      <button onclick="switchTab('print', this)">3D Print</button>
     </div>
 
     <!-- BODY TAB -->
@@ -891,19 +1324,9 @@
       <div class="section">
         <h3>Body Dimensions</h3>
         <div class="control-row">
-          <label>Length</label>
-          <input type="range" min="5" max="7" step="0.05" value="7" oninput="updateBody('length', this.value)">
-          <span class="value" id="val-length">7.00"</span>
-        </div>
-        <div class="control-row">
-          <label>Width</label>
-          <input type="range" min="1.75" max="2.75" step="0.05" value="1.75" oninput="updateBody('width', this.value)">
-          <span class="value" id="val-width">1.75"</span>
-        </div>
-        <div class="control-row">
-          <label>Rear Height</label>
-          <input type="range" min="0.25" max="1.25" step="0.05" value="1.25" oninput="updateBody('rearHeight', this.value)">
-          <span class="value" id="val-rearHeight">1.25"</span>
+          <label>Nose Height</label>
+          <input type="range" min="0.05" max="1.25" step="0.05" value="1.25" oninput="updateBody('noseHeight', this.value)">
+          <span class="value" id="val-noseHeight">1.25"</span>
         </div>
         <div class="control-row">
           <label>Front Height</label>
@@ -911,14 +1334,19 @@
           <span class="value" id="val-frontHeight">1.25"</span>
         </div>
         <div class="control-row">
-          <label>Nose Height</label>
-          <input type="range" min="0.05" max="1.25" step="0.05" value="1.25" oninput="updateBody('noseHeight', this.value)">
-          <span class="value" id="val-noseHeight">1.25"</span>
-        </div>
-        <div class="control-row">
           <label>Scoop Depth</label>
           <input type="range" min="0" max="0.75" step="0.05" value="0" oninput="updateBody('scoopDepth', this.value)">
           <span class="value" id="val-scoopDepth">0.00"</span>
+        </div>
+        <div class="control-row">
+          <label>Rear Height</label>
+          <input type="range" min="0.25" max="1.25" step="0.05" value="1.25" oninput="updateBody('rearHeight', this.value)">
+          <span class="value" id="val-rearHeight">1.25"</span>
+        </div>
+        <div class="control-row">
+          <label>Tail Height</label>
+          <input type="range" min="0" max="1.25" step="0.05" value="1.25" oninput="updateBody('tailHeight', this.value)">
+          <span class="value" id="val-tailHeight">1.25"</span>
         </div>
       </div>
       <div class="section">
@@ -974,6 +1402,11 @@
           <span class="value" id="wt-remaining" style="color:var(--amber)">—</span>
         </div>
       </div>
+      <div class="section" id="auto-weight-section">
+        <h3>Auto Weight</h3>
+        <div id="auto-weight-result" style="margin-bottom:10px;"></div>
+        <button class="btn btn-primary" onclick="applyAutoWeight()" id="auto-weight-btn" style="width:100%;margin-bottom:6px;">Calculate Optimal Weight</button>
+      </div>
       <div class="section">
         <h3>Components</h3>
         <button class="btn btn-primary" onclick="toggleAddForm()" id="add-weight-btn">+ Add Weight</button>
@@ -984,7 +1417,7 @@
           </div>
           <div class="form-row">
             <label>Type</label>
-            <select id="wf-type" onchange="updateCylinderFields()">
+            <select id="wf-type" onchange="updateCylinderFields();previewWeight()">
               <option value="tungsten">Tungsten cube</option>
               <option value="tungsten_cylinder">Tungsten rod</option>
               <option value="lead_strip">Lead strip</option>
@@ -994,7 +1427,7 @@
           </div>
           <div class="form-row" id="wf-diameter-row" style="display:none">
             <label>Rod Diameter</label>
-            <select id="wf-diameter" onchange="computeRodWeight()">
+            <select id="wf-diameter" onchange="computeRodWeight();previewWeight()">
               <option value="0.25">1/4"</option>
               <option value="0.375">3/8"</option>
               <option value="0.5">1/2"</option>
@@ -1002,7 +1435,7 @@
           </div>
           <div class="form-row" id="wf-rodlength-row" style="display:none">
             <label>Rod Length</label>
-            <select id="wf-rodlength" onchange="computeRodWeight()">
+            <select id="wf-rodlength" onchange="computeRodWeight();previewWeight()">
               <option value="1">1"</option>
               <option value="1.5">1.5"</option>
               <option value="2" selected>2"</option>
@@ -1015,22 +1448,22 @@
           </div>
           <div class="form-row" id="wf-weight-row">
             <label>Weight (oz)</label>
-            <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25">
+            <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25" oninput="previewWeight()">
           </div>
           <div class="form-row">
-            <label>Position X (inches from front)</label>
-            <input type="range" id="wf-x" min="0" max="7" step="0.1" value="5.5">
+            <label>Position X (inches from front) <span id="wf-x-val" style="color:var(--amber);font-family:'Share Tech Mono',monospace;float:right">5.5"</span></label>
+            <input type="range" id="wf-x" min="0" max="7" step="0.1" value="5.5" oninput="document.getElementById('wf-x-val').textContent=parseFloat(this.value).toFixed(1)+'&quot;';previewWeight()">
           </div>
           <div class="form-row">
-            <label>Position Y (left-right offset)</label>
-            <input type="range" id="wf-y" min="-1.2" max="1.2" step="0.1" value="0">
+            <label>Position Y (left-right offset) <span id="wf-y-val" style="color:var(--amber);font-family:'Share Tech Mono',monospace;float:right">0.0"</span></label>
+            <input type="range" id="wf-y" min="-1.2" max="1.2" step="0.1" value="0" oninput="document.getElementById('wf-y-val').textContent=parseFloat(this.value).toFixed(1)+'&quot;';previewWeight()">
           </div>
           <div class="checkbox-row" style="margin-top:8px;margin-bottom:8px;">
-            <input type="checkbox" id="wf-embedded">
+            <input type="checkbox" id="wf-embedded" onchange="previewWeight()">
             <label for="wf-embedded">Embedded (drilled into body)</label>
           </div>
           <div class="form-actions">
-            <button class="btn btn-primary btn-sm" onclick="addWeight()">Confirm</button>
+            <button class="btn btn-primary btn-sm" id="wf-confirm-btn" onclick="addWeight()">Confirm</button>
             <button class="btn btn-secondary btn-sm" onclick="toggleAddForm()">Cancel</button>
             <button class="btn btn-secondary btn-sm" onclick="autoOptimizeX()" style="margin-left:auto;">Auto X</button>
           </div>
@@ -1053,11 +1486,15 @@
         <div id="drilled-options" style="display:none;">
           <div class="control-row">
             <label>Hole Height</label>
-            <input type="range" id="drilled-height-slider" min="0.3" max="0.75" step="0.025" value="0.5" oninput="updateDrilledHeight(this.value)">
-            <span class="value" id="val-drilled-height">0.500"</span>
+            <input type="range" id="drilled-height-slider" min="0.044" max="0.215" step="0.005" value="0.1" oninput="updateDrilledHeight(this.value)">
+            <span class="value" id="val-drilled-height">0.100"</span>
+          </div>
+          <div class="control-row">
+            <label>Ground Clearance</label>
+            <span class="value" id="val-drilled-clearance" style="color:var(--green)">0.490"</span>
           </div>
           <div class="alignment-note" style="margin-top:8px;">
-            <strong>Drilled holes:</strong> Drilling into the side of the block gives more precise axle alignment and eliminates wobble vs. open slots. A <em>lower</em> hole raises the body higher off the track (more clearance); a <em>higher</em> hole drops the body closer to the track. Use a drill press or printed jig for straight holes.
+            <strong>Drilled holes:</strong> Lower hole = more clearance. Max height clamped to maintain &ge; &#x215C;" (0.375") clearance. Use a drill press or printed jig for straight holes.
           </div>
         </div>
         <div id="slot-info" style="margin-top:8px;">
@@ -1115,60 +1552,19 @@
       </div>
     </div>
 
-    <!-- RULES TAB -->
-    <div class="tab-content" id="tab-rules">
-      <div class="section">
-        <h3>Pack 3 Compliance Check</h3>
-        <div id="rules-list"></div>
-      </div>
+    <div class="rules-footer">
+      <button onclick="openRulesModal()"><span class="rules-status pass" id="rules-status-dot"></span>Rules Compliance</button>
     </div>
+  </div>
 
-    <!-- 3D PRINT TAB -->
-    <div class="tab-content" id="tab-print">
-      <div class="section">
-        <h3>Bambu A1 Tool Plans</h3>
-        <div class="print-card">
-          <h4>Axle Bender Jig</h4>
-          <p>Precision jig for bending BSA axles to exact angles. Features a protractor scale and pin vise slot. Print in PLA at 0.16mm layer height for accuracy.</p>
-          <div class="dim-grid">
-            <div class="dim">Size: <span>40 x 25 x 15mm</span></div>
-            <div class="dim">Infill: <span>80%</span></div>
-            <div class="dim">Time: <span>~25 min</span></div>
-            <div class="dim">Material: <span>PLA</span></div>
-          </div>
-        </div>
-        <div class="print-card">
-          <h4>Wheel Alignment Gauge</h4>
-          <p>Slides over the car body to check wheel alignment and camber. Two rails reference the body sides while indicator arms touch the wheel face.</p>
-          <div class="dim-grid">
-            <div class="dim">Size: <span>80 x 75 x 20mm</span></div>
-            <div class="dim">Infill: <span>40%</span></div>
-            <div class="dim">Time: <span>~45 min</span></div>
-            <div class="dim">Material: <span>PLA</span></div>
-          </div>
-        </div>
-        <div class="print-card">
-          <h4>Weight Placement Template</h4>
-          <p>Custom template matching your car body profile. Drop-in pockets for tungsten cubes positioned at the calculated optimal CoG location.</p>
-          <div class="dim-grid">
-            <div class="dim">Size: <span>Custom to car</span></div>
-            <div class="dim">Infill: <span>20%</span></div>
-            <div class="dim">Time: <span>~35 min</span></div>
-            <div class="dim">Material: <span>PLA</span></div>
-          </div>
-        </div>
-        <div class="print-card">
-          <h4>Axle Slot Guide</h4>
-          <p>Clamp-on drill guide that ensures axle slots are perfectly straight and at the correct height. Fits over the stock BSA block.</p>
-          <div class="dim-grid">
-            <div class="dim">Size: <span>50 x 45 x 30mm</span></div>
-            <div class="dim">Infill: <span>60%</span></div>
-            <div class="dim">Time: <span>~40 min</span></div>
-            <div class="dim">Material: <span>PLA</span></div>
-          </div>
-        </div>
-        <p style="font-size:0.72rem;color:var(--text-muted);margin-top:12px;font-family:'Share Tech Mono',monospace;letter-spacing:0.5px;">All tools designed for Bambu A1 build volume (256 x 256 x 256mm). Use Bambu Studio with 0.4mm nozzle.</p>
+  <!-- Rules Modal -->
+  <div class="designs-backdrop" id="rules-backdrop" onclick="if(event.target===this)closeRulesModal()">
+    <div class="designs-modal">
+      <div class="designs-header">
+        <h2>RULES COMPLIANCE</h2>
+        <button class="designs-close" onclick="closeRulesModal()">&times;</button>
       </div>
+      <div class="designs-list" id="rules-list" style="padding:12px 16px;"></div>
     </div>
   </div>
 </div>
@@ -1193,9 +1589,9 @@ const CONFIG = {
 
   // --- Axle Mounting ---
   axleSlotHeight:      0.044, // inches — center of axle in kit slot (≈ flush with block bottom, half axle diameter)
-  drilledAxleHeight:   0.5,   // inches — default drill height from bottom (lower = more clearance)
-  drilledAxleHeightMin: 0.3,  // inches — minimum safe drill height
-  drilledAxleHeightMax: 0.75, // inches — maximum drill height (must stay within block)
+  drilledAxleHeight:   0.1,   // inches — default drill height from bottom (lower = more clearance)
+  drilledAxleHeightMin: 0.044, // inches — minimum (flush with bottom, same as slot)
+  drilledAxleHeightMax: 0.215, // inches — maximum drill height (wheelDia/2 - 3/8" clearance)
 
   // --- Axle Slot Positions ---
   frontAxleFromFront:  1.75,  // inches — front axle slot measured from front of car
@@ -1234,10 +1630,10 @@ const CONFIG = {
 // ═══════════════════════ END CONFIGURATION ═══════════════════════
 
 // ===== STATE =====
-const STATE_VERSION = 7; // bump to reset saved state when CONFIG changes
+const STATE_VERSION = 9; // bump to reset saved state when CONFIG changes
 const DEFAULTS = {
   _v: STATE_VERSION,
-  body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: CONFIG.stockHeight, frontHeight: CONFIG.stockHeight, noseHeight: CONFIG.stockHeight, scoopDepth: 0 },
+  body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: CONFIG.stockHeight, frontHeight: CONFIG.stockHeight, noseHeight: CONFIG.stockHeight, scoopDepth: 0, tailHeight: CONFIG.stockHeight },
   rawWoodWeight: CONFIG.stockWeight,
   weights: [],
   axles: {
@@ -1252,6 +1648,7 @@ const DEFAULTS = {
   maxWeight: CONFIG.maxWeight,
   configName: 'Untitled',
   nextId: 1,
+  currentDesignId: null,
 };
 
 function loadState() {
@@ -1272,7 +1669,8 @@ function loadState() {
 
 function saveState() {
   try {
-    localStorage.setItem('pinewood-derby-state', JSON.stringify(state));
+    const toSave = Object.assign({}, state, { weights: state.weights.filter(w => w.id !== -999) });
+    localStorage.setItem('pinewood-derby-state', JSON.stringify(toSave));
   } catch (e) { /* storage full or unavailable */ }
 }
 
@@ -1387,6 +1785,8 @@ const cogMat = new THREE.MeshStandardMaterial({
 // Groups
 const carGroup = new THREE.Group();
 scene.add(carGroup);
+const rulerGroup = new THREE.Group();
+scene.add(rulerGroup);
 let bodyMesh, cogMarker;
 const wheelMeshes = {};
 const axleMeshes = {};
@@ -1401,6 +1801,104 @@ let AXLE_REAR_X = CONFIG.stockLength / 2 - CONFIG.rearAxleFromBack;
 
 function getEffectiveAxleHeight() {
   return state.axleMountType === 'drilled' ? state.drilledAxleHeight : CONFIG.axleSlotHeight;
+}
+
+function makeRulerLabel(text, size) {
+  const s = size || 0.3;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const fontSize = 48;
+  canvas.width = 128;
+  canvas.height = 80;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(100, 160, 220, 0.85)';
+  ctx.font = `bold ${fontSize}px "Share Tech Mono", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(s * 2, s, 1);
+  return sprite;
+}
+
+function buildRuler() {
+  while (rulerGroup.children.length) rulerGroup.remove(rulerGroup.children[0]);
+
+  const { length, width } = state.body;
+  const halfL = length / 2, halfW = width / 2;
+  const sideGap = 1.2;     // distance from car edge to side rulers
+  const endGap = 0.6;      // distance from car ends to end rulers
+  const y = -0.48;
+  const majorTick = 0.2;
+  const minorTick = 0.1;
+  const lineColor = 0x3a7abf;
+  const accentColor = 0x5a9ad9;
+
+  const lineMat = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.5, depthTest: true });
+  const accentMat = new THREE.LineBasicMaterial({ color: accentColor, transparent: true, opacity: 0.7, depthTest: true });
+
+  const sideZ = halfW + sideGap;   // Z position of side rulers
+  const renderOrd = 2;
+
+  function addLine(pts, mat) {
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat);
+    line.renderOrder = renderOrd;
+    rulerGroup.add(line);
+  }
+  function addLabel(text, x, z, size) {
+    const lbl = makeRulerLabel(text, size || 0.22);
+    lbl.position.set(x, y, z);
+    lbl.renderOrder = renderOrd;
+    rulerGroup.add(lbl);
+  }
+
+  // ── Side rulers (length markings along both sides) ──
+  addLine([new THREE.Vector3(-halfL, y, -sideZ), new THREE.Vector3(halfL, y, -sideZ)], lineMat);
+  addLine([new THREE.Vector3(-halfL, y,  sideZ), new THREE.Vector3(halfL, y,  sideZ)], lineMat);
+
+  for (let inch = 0; inch <= length; inch += 0.5) {
+    const isMajor = inch % 1 < 0.001;
+    const x = -halfL + inch;
+    const tl = isMajor ? majorTick : minorTick;
+    const mat = isMajor ? accentMat : lineMat;
+
+    // Ticks point inward (toward car)
+    addLine([new THREE.Vector3(x, y, -sideZ), new THREE.Vector3(x, y, -sideZ + tl)], mat);
+    addLine([new THREE.Vector3(x, y,  sideZ), new THREE.Vector3(x, y,  sideZ - tl)], mat);
+
+    if (isMajor) {
+      addLabel(inch + '"', x, -sideZ - 0.25);
+      addLabel(inch + '"', x,  sideZ + 0.25);
+    }
+  }
+
+  // ── Axle position accents on side rulers ──
+  const axMat = new THREE.LineBasicMaterial({ color: 0xd97706, transparent: true, opacity: 0.5, depthTest: true });
+  [AXLE_FRONT_X, AXLE_REAR_X].forEach(ax => {
+    const ext = majorTick + 0.06;
+    addLine([new THREE.Vector3(ax, y, -sideZ - 0.04), new THREE.Vector3(ax, y, -sideZ + ext)], axMat);
+    addLine([new THREE.Vector3(ax, y,  sideZ + 0.04), new THREE.Vector3(ax, y,  sideZ - ext)], axMat);
+  });
+
+  // ── End rulers (width markings at front and rear) ──
+  const endXf = -halfL - endGap, endXr = halfL + endGap;
+  addLine([new THREE.Vector3(endXf, y, -halfW), new THREE.Vector3(endXf, y, halfW)], lineMat);
+  addLine([new THREE.Vector3(endXr, y, -halfW), new THREE.Vector3(endXr, y, halfW)], lineMat);
+
+  for (let w = 0; w <= width + 0.001; w += 0.25) {
+    const z = -halfW + w;
+    const isMajor = Math.abs(w % 0.5) < 0.001 || Math.abs(w % 0.5 - 0.5) < 0.001;
+    const tl = isMajor ? majorTick : minorTick;
+    const mat = isMajor ? accentMat : lineMat;
+
+    // Ticks point inward (toward car)
+    addLine([new THREE.Vector3(endXf, y, z), new THREE.Vector3(endXf + tl, y, z)], mat);
+    addLine([new THREE.Vector3(endXr, y, z), new THREE.Vector3(endXr - tl, y, z)], mat);
+  }
+
 }
 
 function buildCar() {
@@ -1424,7 +1922,7 @@ function buildCar() {
   const midLinearH = (frontHeight + rearHeight) / 2;
   const cpY = midLinearH - 2 * scoopDepth;               // control point ensures curve passes through midLinearH - scoopDepth at midpoint
   shape.quadraticCurveTo(midX, cpY, AXLE_REAR_X, rearHeight);
-  shape.lineTo(halfL, rearHeight);                        // rear flat
+  shape.lineTo(halfL, state.body.tailHeight);             // tapered tail
   shape.lineTo(halfL, 0);
   shape.closePath();
 
@@ -1434,6 +1932,7 @@ function buildCar() {
   bodyMesh = new THREE.Mesh(bodyGeo, woodMat);
   bodyMesh.castShadow = true;
   bodyMesh.receiveShadow = true;
+  bodyMesh.renderOrder = 1;
   carGroup.add(bodyMesh);
 
   // Wheels and axles
@@ -1635,6 +2134,8 @@ function buildCar() {
   const lowestWheel = Math.min(...Object.values(wheelMeshes).map(w => w.position.y - CONFIG.wheelDiameter / 2));
   carGroup.position.y = -lowestWheel - 0.4;
 
+  buildRuler();
+
   // Update model spec label
   const isCurved = noseHeight < frontHeight - 0.01 || scoopDepth > 0.01;
   document.getElementById('model-spec').textContent =
@@ -1734,8 +2235,10 @@ function getProfileHeight(xFromFront) {
     const linearH = frontHeight + (rearHeight - frontHeight) * t;
     return linearH - scoopDepth * 4 * t * (1 - t);
   }
-  // Rear region: rearAxle → length
-  return rearHeight;
+  // Rear region: rearAxle → length (interpolate rearHeight → tailHeight)
+  const rearSpan = length - rearAxleDist;
+  const tRear = (xFromFront - rearAxleDist) / rearSpan;
+  return rearHeight + (state.body.tailHeight - rearHeight) * tRear;
 }
 
 function getMaterialDensity(type) {
@@ -1800,30 +2303,33 @@ function resetCamera() {
   spherical = { theta: 0.8, phi: 1.0, radius: 12 };
   updateCameraFromSpherical();
 }
-function toggleSpin() {
+function toggleRotate() {
   autoRotate = !autoRotate;
-  const btn = document.getElementById('spin-btn');
+  const btn = document.getElementById('rotate-btn');
+  btn.textContent = autoRotate ? 'Pause' : 'Rotate';
   btn.style.borderColor = autoRotate ? 'var(--green)' : '';
   btn.style.color = autoRotate ? 'var(--green)' : '';
 }
 function toggleXRay() {
   xrayMode = !xrayMode;
-  if (xrayMode && cutawayMode) toggleCutaway();
+  if (xrayMode && cutawayMode) { cutawayMode = false; applyCutawayState(); }
   woodMat.transparent = xrayMode;
   woodMat.opacity = xrayMode ? 0.2 : 1.0;
-  woodMat.depthWrite = !xrayMode;
+  woodMat.depthWrite = true;
   woodMat.needsUpdate = true;
-  const btn = document.getElementById('xray-btn');
-  btn.style.borderColor = xrayMode ? 'var(--green)' : '';
-  btn.style.color = xrayMode ? 'var(--green)' : '';
+  updateViewModeToggle();
 }
 function toggleCutaway() {
   cutawayMode = !cutawayMode;
-  if (cutawayMode && xrayMode) toggleXRay();
+  if (cutawayMode && xrayMode) { xrayMode = false; woodMat.transparent = false; woodMat.opacity = 1.0; woodMat.depthWrite = true; woodMat.needsUpdate = true; }
+  applyCutawayState();
+  updateViewModeToggle();
+}
+function applyCutawayState() {
   if (cutawayMode) {
     woodMat.clippingPlanes = [cutawayPlane];
     Object.values(wheelMeshes).forEach(w => {
-      if (w.position.z > 0) return; // only clip near-side wheels
+      if (w.position.z > 0) return;
       w.traverse(child => {
         if (!child.isMesh) return;
         if (!child.material._isCloned) {
@@ -1842,12 +2348,32 @@ function toggleCutaway() {
     });
   }
   woodMat.needsUpdate = true;
-  const btn = document.getElementById('cutaway-btn');
-  btn.style.borderColor = cutawayMode ? 'var(--green)' : '';
-  btn.style.color = cutawayMode ? 'var(--green)' : '';
+}
+function cycleViewMode() {
+  if (!xrayMode && !cutawayMode) {
+    toggleXRay();
+  } else if (xrayMode) {
+    toggleXRay();
+    toggleCutaway();
+  } else {
+    toggleCutaway();
+  }
+}
+function updateViewModeToggle() {
+  const label = document.getElementById('view-mode-label');
+  const btn = document.getElementById('view-mode-btn');
+  if (xrayMode) {
+    label.textContent = 'X-RAY';
+    btn.textContent = 'CUTAWAY';
+  } else if (cutawayMode) {
+    label.textContent = 'CUTAWAY';
+    btn.textContent = 'FULL';
+  } else {
+    label.textContent = 'FULL';
+    btn.textContent = 'X-RAY';
+  }
 }
 function setView(view) {
-  autoRotate = false;
   if (view === 'top') { spherical = { theta: 0, phi: 0.1, radius: 10 }; }
   else if (view === 'side') { spherical = { theta: Math.PI / 2, phi: Math.PI / 2, radius: 10 }; }
   else if (view === 'front') { spherical = { theta: Math.PI, phi: Math.PI / 2, radius: 10 }; }
@@ -1902,8 +2428,94 @@ function applyAxlePreset(preset) {
   rebuildAll();
 }
 
+let viewModeBeforeForm = null; // tracks what mode was active before form opened
+let previewWeightId = null;    // id of the temp preview weight
+
 function toggleAddForm() {
-  document.getElementById('add-form').classList.toggle('show');
+  const form = document.getElementById('add-form');
+  const isOpening = !form.classList.contains('show');
+  form.classList.toggle('show');
+  editingWeightId = null;
+  document.getElementById('add-weight-btn').textContent = '+ Add Weight';
+  document.getElementById('wf-confirm-btn').textContent = 'Confirm';
+
+  if (isOpening) {
+    // Save current view mode and enter X-Ray
+    viewModeBeforeForm = { xray: xrayMode, cutaway: cutawayMode };
+    if (!xrayMode) toggleXRay();
+    previewWeight(); // start preview
+  } else {
+    // Remove preview and restore view mode
+    removePreviewWeight();
+    restoreViewMode();
+  }
+}
+
+function removePreviewWeight() {
+  if (previewWeightId !== null) {
+    state.weights = state.weights.filter(w => w.id !== previewWeightId);
+    previewWeightId = null;
+    rebuildAll();
+  }
+}
+
+function restoreViewMode() {
+  if (viewModeBeforeForm) {
+    if (xrayMode && !viewModeBeforeForm.xray) toggleXRay();
+    else if (!xrayMode && viewModeBeforeForm.xray) toggleXRay();
+    if (cutawayMode && !viewModeBeforeForm.cutaway) toggleCutaway();
+    else if (!cutawayMode && viewModeBeforeForm.cutaway) toggleCutaway();
+    viewModeBeforeForm = null;
+  }
+}
+
+function previewWeight() {
+  const form = document.getElementById('add-form');
+  if (!form.classList.contains('show')) return;
+
+  const type = document.getElementById('wf-type').value;
+  const x = parseFloat(document.getElementById('wf-x').value);
+  const y = parseFloat(document.getElementById('wf-y').value);
+  const embedded = document.getElementById('wf-embedded').checked;
+  let weight;
+  if (type === 'tungsten_cylinder') {
+    const d = parseFloat(document.getElementById('wf-diameter').value);
+    const l = parseFloat(document.getElementById('wf-rodlength').value);
+    weight = Math.PI * (d / 2) * (d / 2) * l * CONFIG.densityTungsten;
+  } else {
+    weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  }
+
+  if (editingWeightId !== null) {
+    // When editing, update the actual weight live
+    const w = state.weights.find(item => item.id === editingWeightId);
+    if (w) {
+      w.x = x; w.y = y; w.weight = weight; w.type = type; w.embedded = embedded;
+      if (type === 'tungsten_cylinder') {
+        w.diameter = parseFloat(document.getElementById('wf-diameter').value);
+        w.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
+      }
+    }
+  } else {
+    // Add or update preview weight
+    if (previewWeightId !== null) {
+      const pw = state.weights.find(item => item.id === previewWeightId);
+      if (pw) {
+        pw.x = x; pw.y = y; pw.weight = weight; pw.type = type; pw.embedded = embedded;
+        if (type === 'tungsten_cylinder') {
+          pw.diameter = parseFloat(document.getElementById('wf-diameter').value);
+          pw.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
+        }
+      }
+    } else if (weight > 0) {
+      previewWeightId = -999;
+      state.weights.push({ id: previewWeightId, name: '(preview)', type, weight, x, y, embedded,
+        diameter: type === 'tungsten_cylinder' ? parseFloat(document.getElementById('wf-diameter').value) : undefined,
+        rodLength: type === 'tungsten_cylinder' ? parseFloat(document.getElementById('wf-rodlength').value) : undefined
+      });
+    }
+  }
+  rebuildAll();
 }
 
 function updateCylinderFields() {
@@ -1935,24 +2547,84 @@ function addWeight() {
   const x = parseFloat(document.getElementById('wf-x').value);
   const y = parseFloat(document.getElementById('wf-y').value);
   const embedded = document.getElementById('wf-embedded').checked;
-  const obj = { id: state.nextId++, name, type, x, y, embedded };
-  if (type === 'tungsten_cylinder') {
-    obj.diameter = parseFloat(document.getElementById('wf-diameter').value);
-    obj.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
-    obj.weight = Math.PI * (obj.diameter / 2) * (obj.diameter / 2) * obj.rodLength * CONFIG.densityTungsten;
-  } else {
-    obj.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+
+  // Remove preview weight first
+  if (previewWeightId !== null) {
+    state.weights = state.weights.filter(w => w.id !== previewWeightId);
+    previewWeightId = null;
   }
-  state.weights.push(obj);
+
+  if (editingWeightId !== null) {
+    // Update existing weight
+    const w = state.weights.find(item => item.id === editingWeightId);
+    if (w) {
+      w.name = name; w.type = type; w.x = x; w.y = y; w.embedded = embedded;
+      if (type === 'tungsten_cylinder') {
+        w.diameter = parseFloat(document.getElementById('wf-diameter').value);
+        w.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
+        w.weight = Math.PI * (w.diameter / 2) * (w.diameter / 2) * w.rodLength * CONFIG.densityTungsten;
+      } else {
+        w.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+      }
+    }
+    editingWeightId = null;
+  } else {
+    // Add new weight
+    const obj = { id: state.nextId++, name, type, x, y, embedded };
+    if (type === 'tungsten_cylinder') {
+      obj.diameter = parseFloat(document.getElementById('wf-diameter').value);
+      obj.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
+      obj.weight = Math.PI * (obj.diameter / 2) * (obj.diameter / 2) * obj.rodLength * CONFIG.densityTungsten;
+    } else {
+      obj.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+    }
+    state.weights.push(obj);
+  }
   document.getElementById('wf-name').value = '';
   document.getElementById('wf-embedded').checked = false;
-  toggleAddForm();
+  // Close form and restore view mode
+  document.getElementById('add-form').classList.remove('show');
+  document.getElementById('add-weight-btn').textContent = '+ Add Weight';
+  document.getElementById('wf-confirm-btn').textContent = 'Confirm';
+  restoreViewMode();
   rebuildAll();
 }
 
+let editingWeightId = null;
+
 function removeWeight(id) {
   state.weights = state.weights.filter(w => w.id !== id);
+  if (editingWeightId === id) { editingWeightId = null; }
   rebuildAll();
+}
+
+function editWeight(id) {
+  const w = state.weights.find(item => item.id === id);
+  if (!w) return;
+  editingWeightId = id;
+  document.getElementById('wf-name').value = w.name;
+  document.getElementById('wf-type').value = w.type;
+  updateCylinderFields();
+  if (w.type === 'tungsten_cylinder') {
+    document.getElementById('wf-diameter').value = w.diameter || 0.25;
+    document.getElementById('wf-rodlength').value = w.rodLength || 2;
+    computeRodWeight();
+  } else {
+    document.getElementById('wf-weight').value = w.weight;
+  }
+  document.getElementById('wf-x').value = w.x;
+  document.getElementById('wf-y').value = w.y;
+  document.getElementById('wf-x-val').textContent = w.x.toFixed(1) + '"';
+  document.getElementById('wf-y-val').textContent = w.y.toFixed(1) + '"';
+  document.getElementById('wf-embedded').checked = w.embedded;
+  const form = document.getElementById('add-form');
+  if (!form.classList.contains('show')) {
+    viewModeBeforeForm = { xray: xrayMode, cutaway: cutawayMode };
+    if (!xrayMode) toggleXRay();
+    form.classList.add('show');
+  }
+  document.getElementById('add-weight-btn').textContent = 'Cancel Edit';
+  document.getElementById('wf-confirm-btn').textContent = 'Save';
 }
 
 function autoOptimizeX() {
@@ -1988,21 +2660,94 @@ function autoOptimizeX() {
 
   const clamped = Math.max(0, Math.min(length, optimalXFromFront));
   document.getElementById('wf-x').value = clamped.toFixed(1);
+  document.getElementById('wf-x-val').textContent = clamped.toFixed(1) + '"';
+  previewWeight();
+}
+
+function applyAutoWeight() {
+  const { length } = state.body;
+  const halfL = length / 2;
+
+  // Filter out preview weight for calculations
+  const realWeights = state.weights.filter(w => w.id !== previewWeightId);
+  const woodWt = estimateWoodWeight();
+  const addedWt = realWeights.reduce((s, w) => s + w.weight, 0);
+  const currentTotal = woodWt + addedWt + state.wheelAxleWeight;
+  const remaining = state.maxWeight - currentTotal;
+
+  if (remaining <= 0.01) {
+    document.getElementById('auto-weight-result').innerHTML =
+      '<div class="alignment-note" style="border-left-color:var(--race-red)"><strong>At max weight.</strong> Remove existing weights to add more.</div>';
+    return;
+  }
+
+  // Calculate where to put `remaining` oz to hit target COG
+  const cog = calculateCoG();
+  const currentCogX = cog.x;
+  const targetCogX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
+  const optimalWx = (targetCogX * (currentTotal + remaining) - currentCogX * currentTotal) / remaining;
+  const optimalXFromFront = optimalWx + halfL;
+  const clamped = Math.max(0.5, Math.min(length - 0.5, optimalXFromFront));
+
+  // Show result
+  document.getElementById('auto-weight-result').innerHTML =
+    `<div class="alignment-note" style="border-left-color:var(--green)">
+      <strong>Recommended:</strong> Add <span style="color:var(--amber)">${remaining.toFixed(2)} oz</span> at <span style="color:var(--amber)">${clamped.toFixed(1)}"</span> from front (embedded tungsten).<br>
+      This fills to ${state.maxWeight.toFixed(2)} oz and targets COG at ${CONFIG.cogTargetFromRearAxle.toFixed(2)}" fwd of rear axle.
+    </div>`;
+
+  // Pre-fill the add form with these values
+  document.getElementById('wf-name').value = 'Auto ballast';
+  document.getElementById('wf-type').value = 'tungsten';
+  updateCylinderFields();
+  document.getElementById('wf-weight').value = remaining.toFixed(3);
+  document.getElementById('wf-x').value = clamped.toFixed(1);
+  document.getElementById('wf-x-val').textContent = clamped.toFixed(1) + '"';
+  document.getElementById('wf-y').value = '0';
+  document.getElementById('wf-y-val').textContent = '0.0"';
+  document.getElementById('wf-embedded').checked = true;
+
+  // Open the form (will trigger X-Ray + preview)
+  const form = document.getElementById('add-form');
+  if (!form.classList.contains('show')) {
+    viewModeBeforeForm = { xray: xrayMode, cutaway: cutawayMode };
+    if (!xrayMode) toggleXRay();
+    form.classList.add('show');
+  }
+  previewWeight();
+}
+
+function updateAutoWeightDisplay() {
+  const realWeights = state.weights.filter(w => w.id !== previewWeightId);
+  const woodWt = estimateWoodWeight();
+  const addedWt = realWeights.reduce((s, w) => s + w.weight, 0);
+  const currentTotal = woodWt + addedWt + state.wheelAxleWeight;
+  const remaining = state.maxWeight - currentTotal;
+  const btn = document.getElementById('auto-weight-btn');
+  if (remaining > 0.01) {
+    btn.textContent = `Add ${remaining.toFixed(2)} oz — Optimal Placement`;
+    btn.style.display = '';
+  } else {
+    btn.textContent = 'At Max Weight';
+    btn.style.opacity = '0.5';
+  }
 }
 
 function renderWeightList() {
   const list = document.getElementById('weight-list');
-  if (state.weights.length === 0) {
+  const visible = state.weights.filter(w => w.id !== -999);
+  if (visible.length === 0) {
     list.innerHTML = '<p style="font-family:\'Share Tech Mono\',monospace;font-size:0.72rem;color:var(--text-muted);padding:12px 0;letter-spacing:0.5px;">No weights added. Click "+ Add Weight" to begin.</p>';
     return;
   }
-  list.innerHTML = state.weights.map((w, i) => `
+  list.innerHTML = visible.map((w, i) => `
     <div class="weight-item" style="animation-delay:${i * 0.05}s">
       <div class="info">
         <span class="name">${w.name}</span>
         <span class="detail">${w.type === 'tungsten_cylinder' && w.diameter ? formatDiameter(w.diameter) + ' × ' + w.rodLength + '" rod' : w.type.replace('_', ' ')} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front${w.embedded ? ' [EMB]' : ''}</span>
       </div>
       <div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="editWeight(${w.id})">EDIT</button>
         <button class="btn btn-secondary btn-sm" onclick="removeWeight(${w.id})">DEL</button>
       </div>
     </div>
@@ -2049,16 +2794,14 @@ function updateWeightDisplay() {
   const fromRearAxle = AXLE_REAR_X - cog.x;
   const cogTargetFromRearAxle = CONFIG.cogTargetFromRearAxle;
   const cogDelta = fromRearAxle - cogTargetFromRearAxle;
+  const cogOnTarget = Math.abs(cogDelta) < CONFIG.cogToleranceGreen;
 
-  document.getElementById('cog-display').textContent = `${fromRearAxle.toFixed(2)}" fwd of rear axle // ${cog.z >= 0 ? 'R' : 'L'} ${Math.abs(cog.z).toFixed(1)}"`;
-
-  const targetEl = document.getElementById('cog-target-display');
-  targetEl.textContent = `${cogTargetFromRearAxle.toFixed(2)}" fwd of rear axle`;
-  if (Math.abs(cogDelta) < CONFIG.cogToleranceGreen) {
-    targetEl.style.color = 'var(--green)';
-  } else {
-    targetEl.style.color = 'var(--amber)';
-  }
+  // Header COG display
+  const headerCogText = document.getElementById('header-cog-text');
+  headerCogText.textContent = `${fromRearAxle.toFixed(2)}" fwd // Target: ${cogTargetFromRearAxle.toFixed(2)}"`;
+  headerCogText.style.color = cogOnTarget ? 'var(--green)' : 'var(--amber)';
+  const cogLight = document.getElementById('cog-status-light');
+  cogLight.className = 'status-light' + (cogOnTarget ? '' : ' warning');
 
   document.getElementById('dim-l').textContent = state.body.length.toFixed(2) + '"';
   document.getElementById('dim-w').textContent = state.body.width.toFixed(2) + '"';
@@ -2086,6 +2829,10 @@ function updateRules() {
     { pass: true, text: 'Using Pack 3 supplied wood block, axles & wheels' },
   ];
 
+  const allPass = rules.every(r => r.pass);
+  const dot = document.getElementById('rules-status-dot');
+  dot.className = 'rules-status ' + (allPass ? 'pass' : 'fail');
+
   document.getElementById('rules-list').innerHTML = rules.map((r, i) => `
     <div class="rule-item ${r.pass ? 'rule-pass' : 'rule-fail'}" style="animation-delay:${i * 0.06}s">
       <span class="rule-icon">${r.pass ? 'P' : 'F'}</span>
@@ -2107,8 +2854,12 @@ function updateAxleMountType(type) {
 }
 
 function updateDrilledHeight(val) {
-  state.drilledAxleHeight = parseFloat(val);
-  document.getElementById('val-drilled-height').textContent = parseFloat(val).toFixed(3) + '"';
+  const maxH = CONFIG.wheelDiameter / 2 - CONFIG.minClearance;
+  state.drilledAxleHeight = Math.min(parseFloat(val), maxH);
+  document.getElementById('val-drilled-height').textContent = state.drilledAxleHeight.toFixed(3) + '"';
+  const clr = CONFIG.wheelDiameter / 2 - state.drilledAxleHeight;
+  document.getElementById('val-drilled-clearance').textContent = clr.toFixed(3) + '"';
+  document.getElementById('val-drilled-clearance').style.color = clr >= CONFIG.minClearance ? 'var(--green)' : 'var(--race-red)';
   rebuildAll();
 }
 
@@ -2116,18 +2867,181 @@ function rebuildAll() {
   buildCar();
   renderWeightList();
   updateWeightDisplay();
+  updateAutoWeightDisplay();
   updateRules();
   saveState();
 }
 
-// ===== SAVE / LOAD CONFIG =====
-function saveConfigToFile() {
-  const name = prompt('Configuration name:', state.configName);
-  if (name === null) return; // cancelled
+// ===== DESIGN LIBRARY (localStorage) =====
+const LIBRARY_KEY = 'pinewood-derby-cars';
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function getDesignLibrary() {
+  try {
+    return JSON.parse(localStorage.getItem(LIBRARY_KEY)) || [];
+  } catch (e) { return []; }
+}
+
+function saveDesignLibrary(lib) {
+  try {
+    localStorage.setItem(LIBRARY_KEY, JSON.stringify(lib));
+  } catch (e) { /* storage full */ }
+}
+
+function snapshotState() {
+  const snap = JSON.parse(JSON.stringify(state));
+  delete snap.currentDesignId;
+  return snap;
+}
+
+function applyParsedState(parsed) {
+  if (parsed._v !== STATE_VERSION) {
+    Object.assign(state, DEFAULTS, parsed, {
+      _v: STATE_VERSION,
+      body: { ...DEFAULTS.body, ...(parsed.body || {}) },
+      axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) },
+    });
+  } else {
+    Object.assign(state, parsed, {
+      body: { ...DEFAULTS.body, ...(parsed.body || {}) },
+      axles: {
+        fl: { ...DEFAULTS.axles.fl, ...((parsed.axles || {}).fl || {}) },
+        fr: { ...DEFAULTS.axles.fr, ...((parsed.axles || {}).fr || {}) },
+        rl: { ...DEFAULTS.axles.rl, ...((parsed.axles || {}).rl || {}) },
+        rr: { ...DEFAULTS.axles.rr, ...((parsed.axles || {}).rr || {}) },
+      },
+      weights: parsed.weights || [],
+    });
+  }
+}
+
+function quickSave() {
+  if (!state.currentDesignId) {
+    saveAsNewDesign();
+    return;
+  }
+  const lib = getDesignLibrary();
+  const idx = lib.findIndex(d => d.id === state.currentDesignId);
+  if (idx === -1) {
+    saveAsNewDesign();
+    return;
+  }
+  lib[idx].state = snapshotState();
+  lib[idx].savedAt = new Date().toISOString();
+  saveDesignLibrary(lib);
+  saveState();
+  showSaveConfirmation();
+}
+
+function saveAsNewDesign() {
+  const name = prompt('Design name:', state.configName || 'Untitled');
+  if (name === null) return;
   state.configName = name || 'Untitled';
   document.getElementById('config-name-display').textContent = state.configName;
+  const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  state.currentDesignId = id;
+  const lib = getDesignLibrary();
+  lib.push({ id, name: state.configName, savedAt: new Date().toISOString(), state: snapshotState() });
+  saveDesignLibrary(lib);
   saveState();
-  const json = JSON.stringify(state, null, 2);
+  showSaveConfirmation();
+  renderDesignsList();
+}
+
+function loadDesign(id) {
+  const lib = getDesignLibrary();
+  const entry = lib.find(d => d.id === id);
+  if (!entry) return;
+  applyParsedState(entry.state);
+  state.currentDesignId = id;
+  state.configName = entry.name;
+  saveState();
+  restoreUI();
+  rebuildAll();
+  renderDesignsList();
+}
+
+function deleteDesign(id, event) {
+  event.stopPropagation();
+  if (!confirm('Delete this design?')) return;
+  let lib = getDesignLibrary();
+  lib = lib.filter(d => d.id !== id);
+  saveDesignLibrary(lib);
+  if (state.currentDesignId === id) {
+    state.currentDesignId = null;
+  }
+  saveState();
+  renderDesignsList();
+}
+
+function newDesign() {
+  if (!confirm('Start a new design? Unsaved changes to the current design will be lost.')) return;
+  Object.assign(state, JSON.parse(JSON.stringify(DEFAULTS)));
+  state.currentDesignId = null;
+  saveState();
+  restoreUI();
+  rebuildAll();
+  renderDesignsList();
+  closeDesignsModal();
+}
+
+function openDesignsModal() {
+  renderDesignsList();
+  document.getElementById('designs-backdrop').classList.add('open');
+}
+
+function closeDesignsModal() {
+  document.getElementById('designs-backdrop').classList.remove('open');
+}
+
+function openRulesModal() {
+  updateRules();
+  document.getElementById('rules-backdrop').classList.add('open');
+}
+
+function closeRulesModal() {
+  document.getElementById('rules-backdrop').classList.remove('open');
+}
+
+function renderDesignsList() {
+  const lib = getDesignLibrary().sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  const container = document.getElementById('designs-list');
+  if (lib.length === 0) {
+    container.innerHTML = '<div class="designs-empty"><span>&#9881;</span>No saved designs yet.<br>Click <b>Save</b> to store your first design.</div>';
+    return;
+  }
+  container.innerHTML = lib.map(d => {
+    const active = d.id === state.currentDesignId ? ' active' : '';
+    const date = new Date(d.savedAt).toLocaleString();
+    const wCount = (d.state && d.state.weights) ? d.state.weights.length : 0;
+    return `<div class="design-item${active}" onclick="loadDesign('${d.id}')">
+      <div class="design-item-info">
+        <div class="design-item-name">${escapeHtml(d.name)}${active ? ' <span style="color:var(--green);font-size:0.75rem">&#10003; active</span>' : ''}</div>
+        <div class="design-item-meta">${escapeHtml(date)} // ${wCount} weight${wCount !== 1 ? 's' : ''}</div>
+      </div>
+      <button class="design-item-delete" onclick="deleteDesign('${d.id}', event)" title="Delete">DEL</button>
+    </div>`;
+  }).join('');
+}
+
+function showSaveConfirmation() {
+  const btn = document.getElementById('save-btn');
+  const orig = btn.textContent;
+  btn.textContent = '\u2713 Saved';
+  btn.classList.add('saved');
+  setTimeout(() => {
+    btn.textContent = orig;
+    btn.classList.remove('saved');
+  }, 1200);
+}
+
+function exportCurrentDesign() {
+  const json = JSON.stringify(snapshotState(), null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2139,41 +3053,33 @@ function saveConfigToFile() {
   URL.revokeObjectURL(url);
 }
 
-function loadConfigFromFile(input) {
+function importDesignFromFile(input) {
   const file = input.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const parsed = JSON.parse(e.target.result);
-      // Version mismatch: merge with defaults (same logic as loadState)
-      if (parsed._v !== STATE_VERSION) {
-        Object.assign(state, DEFAULTS, parsed, {
-          _v: STATE_VERSION,
-          body: { ...DEFAULTS.body, ...(parsed.body || {}) },
-          axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) },
-        });
-      } else {
-        Object.assign(state, parsed, {
-          body: { ...DEFAULTS.body, ...(parsed.body || {}) },
-          axles: {
-            fl: { ...DEFAULTS.axles.fl, ...((parsed.axles || {}).fl || {}) },
-            fr: { ...DEFAULTS.axles.fr, ...((parsed.axles || {}).fr || {}) },
-            rl: { ...DEFAULTS.axles.rl, ...((parsed.axles || {}).rl || {}) },
-            rr: { ...DEFAULTS.axles.rr, ...((parsed.axles || {}).rr || {}) },
-          },
-          weights: parsed.weights || [],
-        });
-      }
+      applyParsedState(parsed);
+      state.currentDesignId = null;
+      state.configName = parsed.configName || file.name.replace(/\.json$/i, '');
+      document.getElementById('config-name-display').textContent = state.configName;
+      saveState();
       restoreUI();
       rebuildAll();
+      closeDesignsModal();
     } catch (err) {
       alert('Failed to load config: ' + err.message);
     }
   };
   reader.readAsText(file);
-  input.value = ''; // reset so the same file can be re-loaded
+  input.value = '';
 }
+
+// Close designs modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeDesignsModal(); closeRulesModal(); }
+});
 
 // ===== TABS =====
 function switchTab(name, btn) {
@@ -2219,12 +3125,11 @@ function restoreUI() {
 
   // Body sliders
   const bodySliders = {
-    length: document.querySelector('#tab-body input[type="range"][oninput*="length"]'),
-    width: document.querySelector('#tab-body input[type="range"][oninput*="width"]'),
-    rearHeight: document.querySelector('#tab-body input[type="range"][oninput*="rearHeight"]'),
-    frontHeight: document.querySelector('#tab-body input[type="range"][oninput*="frontHeight"]'),
     noseHeight: document.querySelector('#tab-body input[type="range"][oninput*="noseHeight"]'),
+    frontHeight: document.querySelector('#tab-body input[type="range"][oninput*="frontHeight"]'),
     scoopDepth: document.querySelector('#tab-body input[type="range"][oninput*="scoopDepth"]'),
+    rearHeight: document.querySelector('#tab-body input[type="range"][oninput*="rearHeight"]'),
+    tailHeight: document.querySelector('#tab-body input[type="range"][oninput*="tailHeight"]'),
   };
   for (const [key, slider] of Object.entries(bodySliders)) {
     if (slider) {
@@ -2244,8 +3149,14 @@ function restoreUI() {
   document.getElementById('axle-mount-type').value = state.axleMountType;
   document.getElementById('drilled-options').style.display = state.axleMountType === 'drilled' ? 'block' : 'none';
   document.getElementById('slot-info').style.display = state.axleMountType === 'slot' ? 'block' : 'none';
+  // Clamp drilled height to safe range on restore
+  const maxH = CONFIG.wheelDiameter / 2 - CONFIG.minClearance;
+  state.drilledAxleHeight = Math.min(state.drilledAxleHeight, maxH);
   document.getElementById('drilled-height-slider').value = state.drilledAxleHeight;
   document.getElementById('val-drilled-height').textContent = state.drilledAxleHeight.toFixed(3) + '"';
+  const clr = CONFIG.wheelDiameter / 2 - state.drilledAxleHeight;
+  document.getElementById('val-drilled-clearance').textContent = clr.toFixed(3) + '"';
+  document.getElementById('val-drilled-clearance').style.color = clr >= CONFIG.minClearance ? 'var(--green)' : 'var(--race-red)';
   document.getElementById('val-slot-height').textContent = CONFIG.axleSlotHeight.toFixed(3) + '"';
 
   // Axle controls
