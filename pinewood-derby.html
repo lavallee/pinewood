@@ -860,7 +860,7 @@
       <span id="cog-target-display" style="color:var(--green)">—</span>
     </div>
     <div class="viewport-model-label">
-      <div class="model-name">BSA BLOCK</div>
+      <div class="model-name" id="config-name-display">BSA BLOCK</div>
       <div class="model-spec" id="model-spec">7.00 × 1.75 × 0.45 in</div>
     </div>
     <div class="viewport-overlay">
@@ -869,7 +869,12 @@
       <button onclick="setView('side')">Side</button>
       <button onclick="setView('front')">Front</button>
       <button onclick="toggleSpin()" id="spin-btn">Spin</button>
+      <button onclick="toggleXRay()" id="xray-btn">X-Ray</button>
+      <button onclick="toggleCutaway()" id="cutaway-btn">Cutaway</button>
+      <button onclick="saveConfigToFile()" style="margin-left:12px;border-left:1px solid var(--border-light);padding-left:14px;">Save</button>
+      <button onclick="document.getElementById('file-input').click()">Load</button>
     </div>
+    <input type="file" id="file-input" accept=".json" style="display:none" onchange="loadConfigFromFile(this)">
   </div>
 
   <div id="panel">
@@ -897,13 +902,23 @@
         </div>
         <div class="control-row">
           <label>Rear Height</label>
-          <input type="range" min="0.25" max="1.25" step="0.05" value="0.45" oninput="updateBody('rearHeight', this.value)">
-          <span class="value" id="val-rearHeight">0.45"</span>
+          <input type="range" min="0.25" max="1.25" step="0.05" value="1.25" oninput="updateBody('rearHeight', this.value)">
+          <span class="value" id="val-rearHeight">1.25"</span>
         </div>
         <div class="control-row">
           <label>Front Height</label>
-          <input type="range" min="0.2" max="1.0" step="0.05" value="0.3" oninput="updateBody('frontHeight', this.value)">
-          <span class="value" id="val-frontHeight">0.30"</span>
+          <input type="range" min="0.2" max="1.25" step="0.05" value="1.25" oninput="updateBody('frontHeight', this.value)">
+          <span class="value" id="val-frontHeight">1.25"</span>
+        </div>
+        <div class="control-row">
+          <label>Nose Height</label>
+          <input type="range" min="0.05" max="1.25" step="0.05" value="1.25" oninput="updateBody('noseHeight', this.value)">
+          <span class="value" id="val-noseHeight">1.25"</span>
+        </div>
+        <div class="control-row">
+          <label>Scoop Depth</label>
+          <input type="range" min="0" max="0.75" step="0.05" value="0" oninput="updateBody('scoopDepth', this.value)">
+          <span class="value" id="val-scoopDepth">0.00"</span>
         </div>
       </div>
       <div class="section">
@@ -969,15 +984,36 @@
           </div>
           <div class="form-row">
             <label>Type</label>
-            <select id="wf-type">
+            <select id="wf-type" onchange="updateCylinderFields()">
               <option value="tungsten">Tungsten cube</option>
-              <option value="tungsten_cylinder">Tungsten cylinder</option>
+              <option value="tungsten_cylinder">Tungsten rod</option>
               <option value="lead_strip">Lead strip</option>
               <option value="steel_bbs">Steel BBs</option>
               <option value="custom">Custom</option>
             </select>
           </div>
-          <div class="form-row">
+          <div class="form-row" id="wf-diameter-row" style="display:none">
+            <label>Rod Diameter</label>
+            <select id="wf-diameter" onchange="computeRodWeight()">
+              <option value="0.25">1/4"</option>
+              <option value="0.375">3/8"</option>
+              <option value="0.5">1/2"</option>
+            </select>
+          </div>
+          <div class="form-row" id="wf-rodlength-row" style="display:none">
+            <label>Rod Length</label>
+            <select id="wf-rodlength" onchange="computeRodWeight()">
+              <option value="1">1"</option>
+              <option value="1.5">1.5"</option>
+              <option value="2" selected>2"</option>
+              <option value="2.5">2.5"</option>
+              <option value="3">3"</option>
+              <option value="3.5">3.5"</option>
+              <option value="4">4"</option>
+            </select>
+            <span id="wf-rodweight-display" style="font-size:11px;color:var(--text-dim);margin-left:8px"></span>
+          </div>
+          <div class="form-row" id="wf-weight-row">
             <label>Weight (oz)</label>
             <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25">
           </div>
@@ -989,9 +1025,14 @@
             <label>Position Y (left-right offset)</label>
             <input type="range" id="wf-y" min="-1.2" max="1.2" step="0.1" value="0">
           </div>
+          <div class="checkbox-row" style="margin-top:8px;margin-bottom:8px;">
+            <input type="checkbox" id="wf-embedded">
+            <label for="wf-embedded">Embedded (drilled into body)</label>
+          </div>
           <div class="form-actions">
             <button class="btn btn-primary btn-sm" onclick="addWeight()">Confirm</button>
             <button class="btn btn-secondary btn-sm" onclick="toggleAddForm()">Cancel</button>
+            <button class="btn btn-secondary btn-sm" onclick="autoOptimizeX()" style="margin-left:auto;">Auto X</button>
           </div>
         </div>
         <div id="weight-list"></div>
@@ -1184,14 +1225,19 @@ const CONFIG = {
     canted: { fl: { bend: 2.0, camber: 2.0, raised: false }, fr: { bend: 2.0, camber: 2.0, raised: false }, rl: { bend: 2.0, camber: 2.0, raised: false }, rr: { bend: 2.0, camber: 2.0, raised: false } },
     stock:  { fl: { bend: 0,   camber: 0,   raised: false }, fr: { bend: 0,   camber: 0,   raised: false }, rl: { bend: 0,   camber: 0,   raised: false }, rr: { bend: 0,   camber: 0,   raised: false } },
   },
+
+  // --- Material Densities (oz/in³) ---
+  densityTungsten: 11.13,
+  densityLead: 6.55,
+  densitySteel: 4.51,
 };
 // ═══════════════════════ END CONFIGURATION ═══════════════════════
 
 // ===== STATE =====
-const STATE_VERSION = 5; // bump to reset saved state when CONFIG changes
+const STATE_VERSION = 7; // bump to reset saved state when CONFIG changes
 const DEFAULTS = {
   _v: STATE_VERSION,
-  body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: 0.45, frontHeight: 0.3 },
+  body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: CONFIG.stockHeight, frontHeight: CONFIG.stockHeight, noseHeight: CONFIG.stockHeight, scoopDepth: 0 },
   rawWoodWeight: CONFIG.stockWeight,
   weights: [],
   axles: {
@@ -1204,6 +1250,7 @@ const DEFAULTS = {
   drilledAxleHeight: CONFIG.drilledAxleHeight,
   wheelAxleWeight: CONFIG.wheelAxleWeight,
   maxWeight: CONFIG.maxWeight,
+  configName: 'Untitled',
   nextId: 1,
 };
 
@@ -1247,6 +1294,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
+renderer.localClippingEnabled = true;
 
 // Dramatic lighting — boosted for contrast
 const ambient = new THREE.AmbientLight(0x334466, 1.0);
@@ -1343,6 +1391,9 @@ let bodyMesh, cogMarker;
 const wheelMeshes = {};
 const axleMeshes = {};
 const weightMeshes = [];
+let xrayMode = false;
+let cutawayMode = false;
+const cutawayPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0);
 
 // Derived from CONFIG (recalculated in buildCar when length changes)
 let AXLE_FRONT_X = -(CONFIG.stockLength / 2 - CONFIG.frontAxleFromFront);
@@ -1356,20 +1407,26 @@ function buildCar() {
   while (carGroup.children.length) carGroup.remove(carGroup.children[0]);
   weightMeshes.length = 0;
 
-  const { length, width, rearHeight, frontHeight } = state.body;
+  const { length, width, rearHeight, frontHeight, noseHeight, scoopDepth } = state.body;
   const halfL = length / 2, halfW = width / 2;
 
   // Recalculate axle positions for current body length
   AXLE_FRONT_X = -(halfL - CONFIG.frontAxleFromFront);
   AXLE_REAR_X = halfL - CONFIG.rearAxleFromBack;
 
-  // Body
+  // Body — curved profile
   const shape = new THREE.Shape();
   shape.moveTo(-halfL, 0);
-  shape.lineTo(-halfL, frontHeight);
-  shape.lineTo(halfL, rearHeight);
+  shape.lineTo(-halfL, noseHeight);                       // front tip
+  shape.lineTo(AXLE_FRONT_X, frontHeight);                // nose taper
+  // Scoop between axles: quadratic curve dipping by scoopDepth at midpoint
+  const midX = (AXLE_FRONT_X + AXLE_REAR_X) / 2;
+  const midLinearH = (frontHeight + rearHeight) / 2;
+  const cpY = midLinearH - 2 * scoopDepth;               // control point ensures curve passes through midLinearH - scoopDepth at midpoint
+  shape.quadraticCurveTo(midX, cpY, AXLE_REAR_X, rearHeight);
+  shape.lineTo(halfL, rearHeight);                        // rear flat
   shape.lineTo(halfL, 0);
-  shape.lineTo(-halfL, 0);
+  shape.closePath();
 
   const extSettings = { depth: width, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 3 };
   const bodyGeo = new THREE.ExtrudeGeometry(shape, extSettings);
@@ -1380,7 +1437,89 @@ function buildCar() {
   carGroup.add(bodyMesh);
 
   // Wheels and axles
-  const wheelGeo = new THREE.CylinderGeometry(CONFIG.wheelDiameter / 2, CONFIG.wheelDiameter / 2, CONFIG.wheelWidth, 32);
+  function createWheelGroup(isLeftSide) {
+    const group = new THREE.Group();
+    const wR = CONFIG.wheelDiameter / 2;
+    const wW = CONFIG.wheelWidth;
+    const hubR = wR * 0.38;
+    const hubH = 0.04;
+    const boreR = 0.047;
+    const hubSide = isLeftSide ? -1 : 1;
+
+    // Main tire body
+    const tire = new THREE.Mesh(
+      new THREE.CylinderGeometry(wR, wR, wW, 32),
+      wheelMat
+    );
+    group.add(tire);
+
+    // Hub boss on outer face (tapers slightly)
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(hubR - 0.01, hubR, hubH, 24),
+      wheelMat
+    );
+    hub.position.y = hubSide * (wW / 2 + hubH / 2);
+    group.add(hub);
+
+    // Tread edge rims (raised lip on both tread edges)
+    const rimGeo = new THREE.TorusGeometry(wR + 0.001, 0.008, 8, 32);
+    const rimA = new THREE.Mesh(rimGeo, wheelMat);
+    rimA.position.y = -wW / 2 + 0.01;
+    rimA.rotation.x = Math.PI / 2;
+    group.add(rimA);
+    const rimB = new THREE.Mesh(rimGeo, wheelMat);
+    rimB.position.y = wW / 2 - 0.01;
+    rimB.rotation.x = Math.PI / 2;
+    group.add(rimB);
+
+    // Outer face (hub side) concentric ring
+    const outerRing = new THREE.Mesh(
+      new THREE.TorusGeometry(wR * 0.65, 0.006, 6, 32),
+      wheelMat
+    );
+    outerRing.position.y = hubSide * (wW / 2 + 0.001);
+    outerRing.rotation.x = Math.PI / 2;
+    group.add(outerRing);
+
+    // Inner face (car side) concentric rings
+    const innerRing1 = new THREE.Mesh(
+      new THREE.TorusGeometry(wR * 0.6, 0.006, 6, 32),
+      wheelMat
+    );
+    innerRing1.position.y = -hubSide * (wW / 2 + 0.001);
+    innerRing1.rotation.x = Math.PI / 2;
+    group.add(innerRing1);
+    const innerRing2 = new THREE.Mesh(
+      new THREE.TorusGeometry(wR * 0.35, 0.005, 6, 32),
+      wheelMat
+    );
+    innerRing2.position.y = -hubSide * (wW / 2 + 0.001);
+    innerRing2.rotation.x = Math.PI / 2;
+    group.add(innerRing2);
+
+    // Tread mold seam line
+    const seam = new THREE.Mesh(
+      new THREE.TorusGeometry(wR + 0.002, 0.003, 4, 32),
+      wheelMat
+    );
+    seam.rotation.x = Math.PI / 2;
+    group.add(seam);
+
+    // Bore holes (dark circles on both faces)
+    const boreMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9 });
+    const boreGeo = new THREE.CircleGeometry(boreR, 16);
+    const boreInner = new THREE.Mesh(boreGeo, boreMat);
+    boreInner.position.y = -hubSide * (wW / 2 + 0.001);
+    boreInner.rotation.x = hubSide * Math.PI / 2;
+    group.add(boreInner);
+    const boreOuter = new THREE.Mesh(boreGeo, boreMat);
+    boreOuter.position.y = hubSide * (wW / 2 + hubH + 0.001);
+    boreOuter.rotation.x = -hubSide * Math.PI / 2;
+    group.add(boreOuter);
+
+    return group;
+  }
+
   const axleGeo = new THREE.CylinderGeometry(0.04, 0.04, width + 0.3, 8);
 
   const ww = CONFIG.wheelWidth;
@@ -1395,7 +1534,7 @@ function buildCar() {
 
   for (const [key, pos] of Object.entries(positions)) {
     const ax = state.axles[key];
-    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    const wheel = createWheelGroup(pos.z < 0);
     wheel.rotation.x = Math.PI / 2;
     const axleHeightFromBottom = effectiveAxleHeight;
     let wheelY = axleHeightFromBottom - CONFIG.wheelDiameter / 2;
@@ -1406,12 +1545,16 @@ function buildCar() {
     else wheel.rotation.y = THREE.MathUtils.degToRad(-ax.camber);
 
     if (ax.raised) {
-      wheel.material = wheelMat.clone();
-      wheel.material.transparent = true;
-      wheel.material.opacity = 0.35;
+      wheel.traverse(child => {
+        if (child.isMesh) {
+          child.material = child.material.clone();
+          child.material.transparent = true;
+          child.material.opacity = 0.35;
+        }
+      });
     }
 
-    wheel.castShadow = true;
+    wheel.traverse(child => { if (child.isMesh) child.castShadow = true; });
     carGroup.add(wheel);
     wheelMeshes[key] = wheel;
   }
@@ -1426,25 +1569,46 @@ function buildCar() {
 
   // Weights
   state.weights.forEach(w => {
-    const size = Math.pow(w.weight * 0.3, 1 / 3) * 0.6 || 0.2;
-    let geo;
+    let geo, verticalExtent;
     if (w.type === 'tungsten_cylinder') {
-      geo = new THREE.CylinderGeometry(size / 2, size / 2, size, 16);
-    } else if (w.type === 'lead_strip') {
-      geo = new THREE.BoxGeometry(size * 2, size * 0.3, size);
-    } else if (w.type === 'steel_bbs') {
-      geo = new THREE.SphereGeometry(size / 2, 16, 16);
+      const d = w.diameter || 0.25;
+      const l = w.rodLength || (w.weight / (CONFIG.densityTungsten * Math.PI * (d / 2) * (d / 2)));
+      geo = new THREE.CylinderGeometry(d / 2, d / 2, l, 16);
+      // CylinderGeometry axis is Y; rotate so axis aligns with X (along car length)
+      geo.rotateZ(Math.PI / 2);
+      verticalExtent = d; // cross-section diameter determines how much vertical space it occupies
     } else {
-      geo = new THREE.BoxGeometry(size, size, size);
+      const size = Math.pow(w.weight * 0.3, 1 / 3) * 0.6 || 0.2;
+      if (w.type === 'lead_strip') {
+        geo = new THREE.BoxGeometry(size * 2, size * 0.3, size);
+        verticalExtent = size * 0.3;
+      } else if (w.type === 'steel_bbs') {
+        geo = new THREE.SphereGeometry(size / 2, 16, 16);
+        verticalExtent = size;
+      } else {
+        geo = new THREE.BoxGeometry(size, size, size);
+        verticalExtent = size;
+      }
     }
+    const wColor = weightColors[w.type] || 0xdc2626;
     const mat = new THREE.MeshStandardMaterial({
-      color: weightColors[w.type] || 0xdc2626,
-      metalness: 0.7, roughness: 0.2
+      color: wColor,
+      metalness: 0.7, roughness: 0.2,
+      emissive: wColor,
+      emissiveIntensity: 0.3
     });
+    if (w.embedded) {
+      mat.transparent = true;
+      mat.opacity = 0.6;
+    }
     const mesh = new THREE.Mesh(geo, mat);
     const wx = w.x - halfL;
-    const heightAtWx = frontHeight + (rearHeight - frontHeight) * (w.x / length);
-    mesh.position.set(wx, heightAtWx + size / 2 + 0.01, w.y);
+    const heightAtWx = getProfileHeight(w.x);
+    if (w.embedded) {
+      mesh.position.set(wx, heightAtWx - verticalExtent / 2, w.y);
+    } else {
+      mesh.position.set(wx, heightAtWx + verticalExtent / 2 + 0.01, w.y);
+    }
     mesh.castShadow = true;
     carGroup.add(mesh);
     weightMeshes.push(mesh);
@@ -1452,7 +1616,7 @@ function buildCar() {
 
   // CoG target marker (green ring — where you WANT the CoG)
   const cogTargetX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
-  const targetHeightAtX = frontHeight + (rearHeight - frontHeight) * ((cogTargetX + halfL) / length);
+  const targetHeightAtX = getProfileHeight(cogTargetX + halfL);
   const targetRingGeo = new THREE.TorusGeometry(0.12, 0.02, 8, 24);
   const targetRingMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, emissive: 0x22c55e, emissiveIntensity: 0.4 });
   const targetRing = new THREE.Mesh(targetRingGeo, targetRingMat);
@@ -1464,7 +1628,7 @@ function buildCar() {
   const cog = calculateCoG();
   const cogGeo = new THREE.SphereGeometry(0.08, 16, 16);
   cogMarker = new THREE.Mesh(cogGeo, cogMat);
-  const cogHeightAtX = frontHeight + (rearHeight - frontHeight) * ((cog.x + halfL) / length);
+  const cogHeightAtX = getProfileHeight(cog.x + halfL);
   cogMarker.position.set(cog.x, cogHeightAtX + 0.15, cog.z);
   carGroup.add(cogMarker);
 
@@ -1472,40 +1636,54 @@ function buildCar() {
   carGroup.position.y = -lowestWheel - 0.4;
 
   // Update model spec label
+  const isCurved = noseHeight < frontHeight - 0.01 || scoopDepth > 0.01;
   document.getElementById('model-spec').textContent =
-    `${length.toFixed(2)} × ${width.toFixed(2)} × ${Math.max(rearHeight, frontHeight).toFixed(2)} in`;
+    `${length.toFixed(2)} × ${width.toFixed(2)} × ${Math.max(rearHeight, frontHeight, noseHeight).toFixed(2)} in${isCurved ? ' curved' : ''}`;
 }
 
 function calculateCoG() {
-  const { length, width, rearHeight, frontHeight } = state.body;
+  const { length, width } = state.body;
   const halfL = length / 2;
+  const woodDensity = getWoodDensity();
 
-  // --- Wood body centroid ---
-  // Side profile is a trapezoid: front height (a) and rear height (b) over length L.
-  // Centroid of a trapezoid measured from the "a" (front) side:
-  //   x = L/3 * (a + 2b) / (a + b)
-  // This gives distance from front of car, then convert to centered coords.
-  const a = frontHeight, b = rearHeight;
-  const woodWeight = estimateWoodWeight();
-  let woodCogFromFront;
-  if (a + b > 0) {
-    woodCogFromFront = (length / 3) * (a + 2 * b) / (a + b);
-  } else {
-    woodCogFromFront = length / 2; // flat: centroid at middle
+  // --- Wood body centroid via numerical integration ---
+  const N = 100;
+  const dx = length / N;
+  let solidWeight = 0, solidMomentX = 0;
+  for (let i = 0; i < N; i++) {
+    const xFromFront = (i + 0.5) * dx;
+    const h = getProfileHeight(xFromFront);
+    const sliceWeight = h * width * dx * woodDensity;
+    solidWeight += sliceWeight;
+    solidMomentX += (xFromFront - halfL) * sliceWeight;
   }
-  const woodCogX = woodCogFromFront - halfL; // convert to centered coords
 
-  let totalWeight = woodWeight;
-  let sumX = woodCogX * woodWeight;
-  let sumZ = 0;
+  // Subtract cavity contributions from embedded weights (they displace wood)
+  let cavityWeight = 0, cavityMomentX = 0, cavityMomentZ = 0;
+  state.weights.forEach(w => {
+    if (w.embedded) {
+      const density = getMaterialDensity(w.type);
+      if (density > 0) {
+        const displacedVol = w.weight / density;
+        const displacedWood = displacedVol * woodDensity;
+        const wx = w.x - halfL;
+        cavityWeight += displacedWood;
+        cavityMomentX += wx * displacedWood;
+        cavityMomentZ += w.y * displacedWood;
+      }
+    }
+  });
+
+  const netWoodWeight = solidWeight - cavityWeight;
+  let totalWeight = netWoodWeight;
+  let sumX = solidMomentX - cavityMomentX;
+  let sumZ = -cavityMomentZ;
 
   // --- Wheels + Axles ---
-  // Split evenly between front and rear axle positions
   const perAxleWeight = state.wheelAxleWeight / 2;
   totalWeight += state.wheelAxleWeight;
   sumX += AXLE_FRONT_X * perAxleWeight;
   sumX += AXLE_REAR_X * perAxleWeight;
-  // Wheels are centered laterally, so no Z contribution
 
   // --- Added weights ---
   state.weights.forEach(w => {
@@ -1523,11 +1701,65 @@ function calculateCoG() {
 }
 
 function estimateWoodWeight() {
-  const { length, width, rearHeight, frontHeight } = state.body;
+  const bodyVol = estimateBodyVolume();
+  const woodDensity = getWoodDensity();
+  let displacedVol = 0;
+  state.weights.forEach(w => {
+    if (w.embedded) {
+      const density = getMaterialDensity(w.type);
+      if (density > 0) displacedVol += w.weight / density;
+    }
+  });
+  return (bodyVol - displacedVol) * woodDensity;
+}
+
+function getProfileHeight(xFromFront) {
+  const { length, frontHeight, rearHeight, noseHeight, scoopDepth } = state.body;
+  const halfL = length / 2;
+  const frontAxleDist = CONFIG.frontAxleFromFront;
+  const rearAxleDist = length - CONFIG.rearAxleFromBack;
+
+  if (xFromFront <= 0) return noseHeight;
+  if (xFromFront >= length) return rearHeight;
+
+  // Nose region: 0 → frontAxle
+  if (xFromFront <= frontAxleDist) {
+    const t = xFromFront / frontAxleDist;
+    return noseHeight + (frontHeight - noseHeight) * t;
+  }
+  // Scoop region: frontAxle → rearAxle
+  if (xFromFront <= rearAxleDist) {
+    const span = rearAxleDist - frontAxleDist;
+    const t = (xFromFront - frontAxleDist) / span;
+    const linearH = frontHeight + (rearHeight - frontHeight) * t;
+    return linearH - scoopDepth * 4 * t * (1 - t);
+  }
+  // Rear region: rearAxle → length
+  return rearHeight;
+}
+
+function getMaterialDensity(type) {
+  if (type === 'tungsten' || type === 'tungsten_cylinder') return CONFIG.densityTungsten;
+  if (type === 'lead_strip') return CONFIG.densityLead;
+  if (type === 'steel_bbs') return CONFIG.densitySteel;
+  return 0;
+}
+
+function getWoodDensity() {
   const stockVolume = CONFIG.stockLength * CONFIG.stockWidth * CONFIG.stockHeight;
-  const cutVolume = length * width * (rearHeight + frontHeight) / 2;
-  const ratio = cutVolume / stockVolume;
-  return state.rawWoodWeight * ratio;
+  return state.rawWoodWeight / stockVolume;
+}
+
+function estimateBodyVolume() {
+  const { length, width } = state.body;
+  const N = 100;
+  const dx = length / N;
+  let vol = 0;
+  for (let i = 0; i < N; i++) {
+    const xFromFront = (i + 0.5) * dx;
+    vol += getProfileHeight(xFromFront) * width * dx;
+  }
+  return vol;
 }
 
 // ===== ORBIT CONTROLS =====
@@ -1574,11 +1806,51 @@ function toggleSpin() {
   btn.style.borderColor = autoRotate ? 'var(--green)' : '';
   btn.style.color = autoRotate ? 'var(--green)' : '';
 }
+function toggleXRay() {
+  xrayMode = !xrayMode;
+  if (xrayMode && cutawayMode) toggleCutaway();
+  woodMat.transparent = xrayMode;
+  woodMat.opacity = xrayMode ? 0.2 : 1.0;
+  woodMat.depthWrite = !xrayMode;
+  woodMat.needsUpdate = true;
+  const btn = document.getElementById('xray-btn');
+  btn.style.borderColor = xrayMode ? 'var(--green)' : '';
+  btn.style.color = xrayMode ? 'var(--green)' : '';
+}
+function toggleCutaway() {
+  cutawayMode = !cutawayMode;
+  if (cutawayMode && xrayMode) toggleXRay();
+  if (cutawayMode) {
+    woodMat.clippingPlanes = [cutawayPlane];
+    Object.values(wheelMeshes).forEach(w => {
+      if (w.position.z > 0) return; // only clip near-side wheels
+      w.traverse(child => {
+        if (!child.isMesh) return;
+        if (!child.material._isCloned) {
+          child.material = child.material.clone();
+          child.material._isCloned = true;
+        }
+        child.material.clippingPlanes = [cutawayPlane];
+      });
+    });
+  } else {
+    woodMat.clippingPlanes = [];
+    Object.values(wheelMeshes).forEach(w => {
+      w.traverse(child => {
+        if (child.isMesh && child.material.clippingPlanes) child.material.clippingPlanes = [];
+      });
+    });
+  }
+  woodMat.needsUpdate = true;
+  const btn = document.getElementById('cutaway-btn');
+  btn.style.borderColor = cutawayMode ? 'var(--green)' : '';
+  btn.style.color = cutawayMode ? 'var(--green)' : '';
+}
 function setView(view) {
   autoRotate = false;
   if (view === 'top') { spherical = { theta: 0, phi: 0.1, radius: 10 }; }
-  else if (view === 'side') { spherical = { theta: 0, phi: Math.PI / 2, radius: 10 }; }
-  else if (view === 'front') { spherical = { theta: Math.PI / 2, phi: Math.PI / 2, radius: 10 }; }
+  else if (view === 'side') { spherical = { theta: Math.PI / 2, phi: Math.PI / 2, radius: 10 }; }
+  else if (view === 'front') { spherical = { theta: Math.PI, phi: Math.PI / 2, radius: 10 }; }
   updateCameraFromSpherical();
 }
 
@@ -1634,14 +1906,46 @@ function toggleAddForm() {
   document.getElementById('add-form').classList.toggle('show');
 }
 
+function updateCylinderFields() {
+  const isCylinder = document.getElementById('wf-type').value === 'tungsten_cylinder';
+  document.getElementById('wf-diameter-row').style.display = isCylinder ? '' : 'none';
+  document.getElementById('wf-rodlength-row').style.display = isCylinder ? '' : 'none';
+  document.getElementById('wf-weight-row').style.display = isCylinder ? 'none' : '';
+  if (isCylinder) computeRodWeight();
+}
+
+function computeRodWeight() {
+  const d = parseFloat(document.getElementById('wf-diameter').value);
+  const l = parseFloat(document.getElementById('wf-rodlength').value);
+  const weight = Math.PI * (d / 2) * (d / 2) * l * CONFIG.densityTungsten;
+  document.getElementById('wf-weight').value = weight.toFixed(3);
+  document.getElementById('wf-rodweight-display').textContent = '= ' + weight.toFixed(2) + ' oz';
+}
+
+function formatDiameter(d) {
+  if (d === 0.25) return '1/4"';
+  if (d === 0.375) return '3/8"';
+  if (d === 0.5) return '1/2"';
+  return d + '"';
+}
+
 function addWeight() {
   const name = document.getElementById('wf-name').value || ('Weight ' + state.nextId);
   const type = document.getElementById('wf-type').value;
-  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
   const x = parseFloat(document.getElementById('wf-x').value);
   const y = parseFloat(document.getElementById('wf-y').value);
-  state.weights.push({ id: state.nextId++, name, type, weight, x, y });
+  const embedded = document.getElementById('wf-embedded').checked;
+  const obj = { id: state.nextId++, name, type, x, y, embedded };
+  if (type === 'tungsten_cylinder') {
+    obj.diameter = parseFloat(document.getElementById('wf-diameter').value);
+    obj.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
+    obj.weight = Math.PI * (obj.diameter / 2) * (obj.diameter / 2) * obj.rodLength * CONFIG.densityTungsten;
+  } else {
+    obj.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  }
+  state.weights.push(obj);
   document.getElementById('wf-name').value = '';
+  document.getElementById('wf-embedded').checked = false;
   toggleAddForm();
   rebuildAll();
 }
@@ -1649,6 +1953,41 @@ function addWeight() {
 function removeWeight(id) {
   state.weights = state.weights.filter(w => w.id !== id);
   rebuildAll();
+}
+
+function autoOptimizeX() {
+  const { length } = state.body;
+  const halfL = length / 2;
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const type = document.getElementById('wf-type').value;
+  const embedded = document.getElementById('wf-embedded').checked;
+  if (weight <= 0) { alert('Enter a weight first.'); return; }
+
+  const cog = calculateCoG();
+  const currentCogX = cog.x;
+  const currentTotal = estimateWoodWeight() + state.wheelAxleWeight + state.weights.reduce((s, w) => s + w.weight, 0);
+  const targetCogX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
+
+  // Effective weight accounts for wood displacement if embedded
+  let effectiveWeight = weight;
+  if (embedded) {
+    const density = getMaterialDensity(type);
+    if (density > 0) {
+      const woodDensity = getWoodDensity();
+      effectiveWeight = weight - (weight / density) * woodDensity;
+    }
+  }
+
+  // Solve: targetCogX = (currentCogX * currentTotal + wx * effectiveWeight) / (currentTotal + effectiveWeight)
+  const optimalWx = (targetCogX * (currentTotal + effectiveWeight) - currentCogX * currentTotal) / effectiveWeight;
+  const optimalXFromFront = optimalWx + halfL;
+
+  if (optimalXFromFront < 0 || optimalXFromFront > length) {
+    alert(`Optimal position (${optimalXFromFront.toFixed(2)}" from front) is outside the car body. Consider adjusting weight or other parameters.`);
+  }
+
+  const clamped = Math.max(0, Math.min(length, optimalXFromFront));
+  document.getElementById('wf-x').value = clamped.toFixed(1);
 }
 
 function renderWeightList() {
@@ -1661,7 +2000,7 @@ function renderWeightList() {
     <div class="weight-item" style="animation-delay:${i * 0.05}s">
       <div class="info">
         <span class="name">${w.name}</span>
-        <span class="detail">${w.type.replace('_', ' ')} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front</span>
+        <span class="detail">${w.type === 'tungsten_cylinder' && w.diameter ? formatDiameter(w.diameter) + ' × ' + w.rodLength + '" rod' : w.type.replace('_', ' ')} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front${w.embedded ? ' [EMB]' : ''}</span>
       </div>
       <div class="actions">
         <button class="btn btn-secondary btn-sm" onclick="removeWeight(${w.id})">DEL</button>
@@ -1723,7 +2062,7 @@ function updateWeightDisplay() {
 
   document.getElementById('dim-l').textContent = state.body.length.toFixed(2) + '"';
   document.getElementById('dim-w').textContent = state.body.width.toFixed(2) + '"';
-  document.getElementById('dim-h').textContent = Math.max(state.body.rearHeight, state.body.frontHeight).toFixed(2) + '"';
+  document.getElementById('dim-h').textContent = Math.max(state.body.rearHeight, state.body.frontHeight, state.body.noseHeight).toFixed(2) + '"';
   // Ground clearance: wheel bottom on ground, axle center at wheelRadius above ground,
   // block bottom at (wheelRadius - axleHeight) above ground
   const effAxleH = getEffectiveAxleHeight();
@@ -1781,6 +2120,61 @@ function rebuildAll() {
   saveState();
 }
 
+// ===== SAVE / LOAD CONFIG =====
+function saveConfigToFile() {
+  const name = prompt('Configuration name:', state.configName);
+  if (name === null) return; // cancelled
+  state.configName = name || 'Untitled';
+  document.getElementById('config-name-display').textContent = state.configName;
+  saveState();
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (state.configName || 'Untitled') + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function loadConfigFromFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      // Version mismatch: merge with defaults (same logic as loadState)
+      if (parsed._v !== STATE_VERSION) {
+        Object.assign(state, DEFAULTS, parsed, {
+          _v: STATE_VERSION,
+          body: { ...DEFAULTS.body, ...(parsed.body || {}) },
+          axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) },
+        });
+      } else {
+        Object.assign(state, parsed, {
+          body: { ...DEFAULTS.body, ...(parsed.body || {}) },
+          axles: {
+            fl: { ...DEFAULTS.axles.fl, ...((parsed.axles || {}).fl || {}) },
+            fr: { ...DEFAULTS.axles.fr, ...((parsed.axles || {}).fr || {}) },
+            rl: { ...DEFAULTS.axles.rl, ...((parsed.axles || {}).rl || {}) },
+            rr: { ...DEFAULTS.axles.rr, ...((parsed.axles || {}).rr || {}) },
+          },
+          weights: parsed.weights || [],
+        });
+      }
+      restoreUI();
+      rebuildAll();
+    } catch (err) {
+      alert('Failed to load config: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = ''; // reset so the same file can be re-loaded
+}
+
 // ===== TABS =====
 function switchTab(name, btn) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
@@ -1820,12 +2214,17 @@ function animate() {
 // ===== INIT =====
 // Restore saved state into UI inputs
 function restoreUI() {
+  // Config name
+  document.getElementById('config-name-display').textContent = state.configName || 'BSA BLOCK';
+
   // Body sliders
   const bodySliders = {
     length: document.querySelector('#tab-body input[type="range"][oninput*="length"]'),
     width: document.querySelector('#tab-body input[type="range"][oninput*="width"]'),
     rearHeight: document.querySelector('#tab-body input[type="range"][oninput*="rearHeight"]'),
     frontHeight: document.querySelector('#tab-body input[type="range"][oninput*="frontHeight"]'),
+    noseHeight: document.querySelector('#tab-body input[type="range"][oninput*="noseHeight"]'),
+    scoopDepth: document.querySelector('#tab-body input[type="range"][oninput*="scoopDepth"]'),
   };
   for (const [key, slider] of Object.entries(bodySliders)) {
     if (slider) {
