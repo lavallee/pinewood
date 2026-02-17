@@ -1,0 +1,72 @@
+{
+  "_v": 10,
+  "body": {
+    "length": 7,
+    "width": 1.75,
+    "rearHeight": 0.5,
+    "frontHeight": 0.25,
+    "noseHeight": 0.05,
+    "scoopDepth": 0,
+    "tailHeight": 0.55
+  },
+  "rawWoodWeight": 3.42,
+  "weights": [
+    {
+      "id": 1,
+      "name": "1/4\"x2\" Rod (center)",
+      "type": "tungsten_cylinder",
+      "catalogId": "tr-25-2",
+      "weight": 1.093,
+      "x": 4.36,
+      "y": 0,
+      "embedded": true,
+      "diameter": 0.25,
+      "rodLength": 2
+    },
+    {
+      "id": 2,
+      "name": "3/8\" Cube (left)",
+      "type": "tungsten_cube",
+      "catalogId": "tc-38",
+      "weight": 0.586,
+      "x": 5.24,
+      "y": -0.4,
+      "embedded": true
+    },
+    {
+      "id": 3,
+      "name": "3/8\" Cube (right)",
+      "type": "tungsten_cube",
+      "catalogId": "tc-38",
+      "weight": 0.586,
+      "x": 5.24,
+      "y": 0.4,
+      "embedded": true
+    },
+    {
+      "id": 4,
+      "name": "Putty at tail",
+      "type": "tungsten_putty",
+      "catalogId": "tp",
+      "weight": 1.261,
+      "x": 6.5,
+      "y": 0,
+      "embedded": false
+    }
+  ],
+  "axles": {
+    "fl": { "bend": 1.5, "camber": 0, "raised": false },
+    "fr": { "bend": 1.5, "camber": 0, "raised": false },
+    "rl": { "bend": 1.5, "camber": 0, "raised": false },
+    "rr": { "bend": 1.5, "camber": 0, "raised": false }
+  },
+  "axleMountType": "slot",
+  "drilledAxleHeight": 0.1,
+  "wheelAxleWeight": 0.49,
+  "maxWeight": 5,
+  "miscWeight": 0.05,
+  "miscWeightX": 3.5,
+  "plannerItems": [],
+  "configName": "slim — rod + cubes + putty",
+  "nextId": 5
+}

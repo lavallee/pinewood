@@ -1388,10 +1388,23 @@
           <label>Added weights</label>
           <span class="value" id="wt-added">0.00 oz</span>
         </div>
+        <div class="control-row" id="wt-displaced-row" style="display:none;">
+          <label style="font-size:0.72rem;color:var(--text-muted);">&nbsp;&nbsp;(displaces wood)</label>
+          <span class="value" id="wt-displaced" style="font-size:0.72rem;color:var(--text-muted);">0.00 oz</span>
+        </div>
         <div class="control-row">
           <label>Wheels + Axles</label>
           <input type="number" id="wheel-axle-weight" value="0.49" step="0.01" min="0" max="3" oninput="updateWheelAxleWeight()">
           <span class="value">oz</span>
+        </div>
+        <div class="control-row">
+          <label>Other (paint, glue, etc.)</label>
+          <input type="number" id="misc-weight" value="0" step="0.01" min="0" max="3" oninput="updateMiscWeight()">
+          <span class="value">oz</span>
+        </div>
+        <div class="control-row" id="misc-weight-x-row" style="display:none;">
+          <label>Other weight center X <span id="misc-weight-x-val" style="color:var(--amber);font-family:'Share Tech Mono',monospace;float:right">3.5"</span></label>
+          <input type="range" id="misc-weight-x" min="0" max="7" step="0.1" value="3.5" oninput="updateMiscWeightX(this.value)">
         </div>
         <div class="control-row" style="border-top:1px solid var(--border); padding-top:8px;">
           <label style="color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:1px;">Total</label>
@@ -1402,10 +1415,27 @@
           <span class="value" id="wt-remaining" style="color:var(--amber)">—</span>
         </div>
       </div>
-      <div class="section" id="auto-weight-section">
-        <h3>Auto Weight</h3>
-        <div id="auto-weight-result" style="margin-bottom:10px;"></div>
-        <button class="btn btn-primary" onclick="applyAutoWeight()" id="auto-weight-btn" style="width:100%;margin-bottom:6px;">Calculate Optimal Weight</button>
+      <div class="section" id="planner-section">
+        <h3>Weight Planner</h3>
+        <div id="planner-budget" style="font-family:'Share Tech Mono',monospace;font-size:0.78rem;color:var(--text-dim);margin-bottom:8px;"></div>
+        <div id="planner-items"></div>
+        <div style="display:flex;gap:6px;margin:8px 0;">
+          <select id="planner-add-cat" style="flex:1;" onchange="updatePlannerProductOptions()"></select>
+          <select id="planner-add-product" style="flex:1;"></select>
+          <button class="btn btn-secondary btn-sm" onclick="addPlannerItem()">+ Add</button>
+        </div>
+        <div id="planner-total" style="font-family:'Share Tech Mono',monospace;font-size:0.78rem;margin-bottom:8px;"></div>
+        <div id="planner-warning" style="font-size:0.72rem;margin-bottom:8px;"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="runOptimizer()" style="flex:1;">Optimize Placement</button>
+          <button class="btn btn-secondary btn-sm" onclick="applyPlacements()" id="planner-apply-btn" style="flex:1;display:none;">Apply All</button>
+        </div>
+        <div id="planner-results" style="font-family:'Share Tech Mono',monospace;font-size:0.72rem;margin-top:8px;"></div>
+        <div style="margin-top:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="quickFillRemaining()" style="width:100%;">Quick Fill Remaining</button>
+        </div>
+        <div id="auto-weight-result" style="margin-top:8px;"></div>
+        <button class="btn btn-primary" onclick="applyAutoWeight()" id="auto-weight-btn" style="width:100%;margin-top:6px;display:none;">Calculate Optimal Weight</button>
       </div>
       <div class="section">
         <h3>Components</h3>
@@ -1416,52 +1446,36 @@
             <input type="text" id="wf-name" placeholder="e.g. Rear tungsten cube">
           </div>
           <div class="form-row">
-            <label>Type</label>
-            <select id="wf-type" onchange="updateCylinderFields();previewWeight()">
-              <option value="tungsten">Tungsten cube</option>
-              <option value="tungsten_cylinder">Tungsten rod</option>
-              <option value="lead_strip">Lead strip</option>
-              <option value="steel_bbs">Steel BBs</option>
-              <option value="custom">Custom</option>
-            </select>
-          </div>
-          <div class="form-row" id="wf-diameter-row" style="display:none">
-            <label>Rod Diameter</label>
-            <select id="wf-diameter" onchange="computeRodWeight();previewWeight()">
-              <option value="0.25">1/4"</option>
-              <option value="0.375">3/8"</option>
-              <option value="0.5">1/2"</option>
-            </select>
-          </div>
-          <div class="form-row" id="wf-rodlength-row" style="display:none">
-            <label>Rod Length</label>
-            <select id="wf-rodlength" onchange="computeRodWeight();previewWeight()">
-              <option value="1">1"</option>
-              <option value="1.5">1.5"</option>
-              <option value="2" selected>2"</option>
-              <option value="2.5">2.5"</option>
-              <option value="3">3"</option>
-              <option value="3.5">3.5"</option>
-              <option value="4">4"</option>
-            </select>
-            <span id="wf-rodweight-display" style="font-size:11px;color:var(--text-dim);margin-left:8px"></span>
-          </div>
-          <div class="form-row" id="wf-weight-row">
-            <label>Weight (oz)</label>
-            <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25" oninput="previewWeight()">
+            <label>Category</label>
+            <select id="wf-category" onchange="updateCatalogProducts()"></select>
           </div>
           <div class="form-row">
+            <label>Product</label>
+            <select id="wf-product" onchange="selectCatalogProduct()"></select>
+          </div>
+          <div class="form-row" id="wf-qty-row" style="display:none;">
+            <label>Quantity</label>
+            <input type="number" id="wf-qty" value="1" min="1" max="50" step="1" oninput="updateQtyWeight();previewWeight()">
+          </div>
+          <div class="form-row" id="wf-weight-row">
+            <label>Weight (oz) <span id="wf-weight-note" style="font-size:0.7rem;color:var(--text-dim);"></span></label>
+            <input type="number" id="wf-weight" step="0.01" min="0" max="5" value="0.25" oninput="previewWeight()">
+          </div>
+          <div id="wf-dims-display" style="font-size:0.72rem;color:var(--text-dim);font-family:'Share Tech Mono',monospace;padding:2px 0 6px;"></div>
+          <div class="form-row">
             <label>Position X (inches from front) <span id="wf-x-val" style="color:var(--amber);font-family:'Share Tech Mono',monospace;float:right">5.5"</span></label>
-            <input type="range" id="wf-x" min="0" max="7" step="0.1" value="5.5" oninput="document.getElementById('wf-x-val').textContent=parseFloat(this.value).toFixed(1)+'&quot;';previewWeight()">
+            <input type="range" id="wf-x" min="0" max="7" step="0.1" value="5.5" oninput="document.getElementById('wf-x-val').textContent=parseFloat(this.value).toFixed(1)+'&quot;';previewWeight();checkBodyFit()">
           </div>
           <div class="form-row">
             <label>Position Y (left-right offset) <span id="wf-y-val" style="color:var(--amber);font-family:'Share Tech Mono',monospace;float:right">0.0"</span></label>
             <input type="range" id="wf-y" min="-1.2" max="1.2" step="0.1" value="0" oninput="document.getElementById('wf-y-val').textContent=parseFloat(this.value).toFixed(1)+'&quot;';previewWeight()">
           </div>
-          <div class="checkbox-row" style="margin-top:8px;margin-bottom:8px;">
-            <input type="checkbox" id="wf-embedded" onchange="previewWeight()">
+          <div class="checkbox-row" style="margin-top:8px;margin-bottom:4px;">
+            <input type="checkbox" id="wf-embedded" onchange="previewWeight();updateNetWeightDisplay();checkBodyFit()">
             <label for="wf-embedded">Embedded (drilled into body)</label>
           </div>
+          <div id="wf-net-weight" style="font-size:0.72rem;color:var(--text-dim);font-family:'Share Tech Mono',monospace;padding:0 0 6px;"></div>
+          <div id="wf-fit-warning" style="font-size:0.72rem;padding:0 0 6px;"></div>
           <div class="form-actions">
             <button class="btn btn-primary btn-sm" id="wf-confirm-btn" onclick="addWeight()">Confirm</button>
             <button class="btn btn-secondary btn-sm" onclick="toggleAddForm()">Cancel</button>
@@ -1629,8 +1643,66 @@ const CONFIG = {
 };
 // ═══════════════════════ END CONFIGURATION ═══════════════════════
 
+// ===== WEIGHT CATALOG =====
+const WEIGHT_CATALOG = {
+  // Tungsten Cubes
+  'tc-25':  { name: '1/4" Tungsten Cube',  cat: 'cube',  density: 11.13, weight: 0.174, dims: {x:.25,y:.25,z:.25},     shape:'box',    embed:true  },
+  'tc-38':  { name: '3/8" Tungsten Cube',  cat: 'cube',  density: 11.13, weight: 0.586, dims: {x:.375,y:.375,z:.375}, shape:'box',    embed:true  },
+  // Tungsten Rods
+  'tr-25-1':  { name: '1/4"×1" Rod',   cat: 'rod', density: 11.13, dims: {d:.25,l:1},   shape:'cyl', embed:true },
+  'tr-25-2':  { name: '1/4"×2" Rod',   cat: 'rod', density: 11.13, dims: {d:.25,l:2},   shape:'cyl', embed:true },
+  'tr-25-3':  { name: '1/4"×3" Rod',   cat: 'rod', density: 11.13, dims: {d:.25,l:3},   shape:'cyl', embed:true },
+  'tr-38-1':  { name: '3/8"×1" Rod',   cat: 'rod', density: 11.13, dims: {d:.375,l:1},  shape:'cyl', embed:true },
+  'tr-38-2':  { name: '3/8"×2" Rod',   cat: 'rod', density: 11.13, dims: {d:.375,l:2},  shape:'cyl', embed:true },
+  'tr-38-3':  { name: '3/8"×3" Rod',   cat: 'rod', density: 11.13, dims: {d:.375,l:3},  shape:'cyl', embed:true },
+  'tr-50-1':  { name: '1/2"×1" Rod',   cat: 'rod', density: 11.13, dims: {d:.5,l:1},    shape:'cyl', embed:true },
+  'tr-50-2':  { name: '1/2"×2" Rod',   cat: 'rod', density: 11.13, dims: {d:.5,l:2},    shape:'cyl', embed:true },
+  // Tungsten Putty
+  'tp':     { name: 'Tungsten Putty',    cat: 'putty',  density: 11.0,  weight: null, shape:'putty', embed:false, userWeight:true },
+  // Tungsten Plates
+  'tw-plate':{ name: 'Flat Plate 1.5×0.5×1/8"', cat:'plate', density:11.13, weight:1.04, dims:{x:1.5,y:.125,z:.5}, shape:'box', embed:false },
+  // Lead
+  'ls':     { name: 'Lead Strip 3×1/2×1/16"', cat: 'lead',  density: 6.55, weight: 0.61, dims:{x:3,y:.0625,z:.5}, shape:'box', embed:false },
+  'lw':     { name: 'Lead Wire (cut to wt)', cat: 'lead',  density: 6.55, weight: null, shape:'putty', embed:false, userWeight:true },
+  // Steel BBs
+  'sb':     { name: 'Steel BB',           cat: 'bb',     density: 4.51, weight: 0.021, dims:{d:.177}, shape:'sphere', embed:true },
+  // Custom
+  'custom': { name: 'Custom Weight',      cat: 'custom', density: 0, weight: null, shape:'box', embed:false, userWeight:true },
+};
+
+const CATALOG_CATEGORIES = [
+  { key: 'cube',  label: 'Tungsten Cube' },
+  { key: 'rod',   label: 'Tungsten Rod' },
+  { key: 'putty', label: 'Tungsten Putty' },
+  { key: 'plate', label: 'Tungsten Plate' },
+  { key: 'lead',  label: 'Lead' },
+  { key: 'bb',    label: 'Steel BBs' },
+  { key: 'custom',label: 'Custom' },
+];
+
+function getCatalogWeight(id) {
+  const item = WEIGHT_CATALOG[id];
+  if (!item) return 0;
+  if (item.weight != null) return item.weight;
+  // Compute from cylinder geometry: π r² l × density
+  if (item.shape === 'cyl' && item.dims) {
+    const r = item.dims.d / 2;
+    return Math.PI * r * r * item.dims.l * item.density;
+  }
+  return 0;
+}
+
+function getCatalogDimsText(id) {
+  const item = WEIGHT_CATALOG[id];
+  if (!item || !item.dims) return '';
+  if (item.shape === 'box') return `${item.dims.x}" × ${item.dims.y}" × ${item.dims.z}"`;
+  if (item.shape === 'cyl') return `${formatDiameter(item.dims.d)} dia × ${item.dims.l}"`;
+  if (item.shape === 'sphere') return `${formatDiameter(item.dims.d)} dia`;
+  return '';
+}
+
 // ===== STATE =====
-const STATE_VERSION = 9; // bump to reset saved state when CONFIG changes
+const STATE_VERSION = 10; // bump to reset saved state when CONFIG changes
 const DEFAULTS = {
   _v: STATE_VERSION,
   body: { length: CONFIG.stockLength, width: CONFIG.stockWidth, rearHeight: CONFIG.stockHeight, frontHeight: CONFIG.stockHeight, noseHeight: CONFIG.stockHeight, scoopDepth: 0, tailHeight: CONFIG.stockHeight },
@@ -1646,25 +1718,39 @@ const DEFAULTS = {
   drilledAxleHeight: CONFIG.drilledAxleHeight,
   wheelAxleWeight: CONFIG.wheelAxleWeight,
   maxWeight: CONFIG.maxWeight,
+  miscWeight: 0,
+  miscWeightX: 3.5,
+  plannerItems: [],
   configName: 'Untitled',
   nextId: 1,
   currentDesignId: null,
 };
 
+function migrateState(parsed) {
+  if (parsed._v < 10) {
+    if (parsed.miscWeight === undefined) parsed.miscWeight = 0;
+    if (parsed.miscWeightX === undefined) parsed.miscWeightX = 3.5;
+    if (parsed.plannerItems === undefined) parsed.plannerItems = [];
+    parsed._v = 10;
+  }
+  return parsed;
+}
+
 function loadState() {
   try {
     const saved = localStorage.getItem('pinewood-derby-state');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // If schema version changed, discard old state and use fresh defaults
-      if (parsed._v !== STATE_VERSION) {
+      let parsed = JSON.parse(saved);
+      if (parsed._v && parsed._v >= 9 && parsed._v < STATE_VERSION) {
+        parsed = migrateState(parsed);
+      } else if (parsed._v !== STATE_VERSION) {
         localStorage.removeItem('pinewood-derby-state');
-      } else {
-        return { ...DEFAULTS, ...parsed, body: { ...DEFAULTS.body, ...(parsed.body || {}) }, axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) } };
+        return { ...DEFAULTS, body: { ...DEFAULTS.body }, axles: { fl: { ...DEFAULTS.axles.fl }, fr: { ...DEFAULTS.axles.fr }, rl: { ...DEFAULTS.axles.rl }, rr: { ...DEFAULTS.axles.rr } }, weights: [], plannerItems: [] };
       }
+      return { ...DEFAULTS, ...parsed, body: { ...DEFAULTS.body, ...(parsed.body || {}) }, axles: { ...DEFAULTS.axles, ...(parsed.axles || {}) } };
     }
   } catch (e) { /* ignore corrupt data */ }
-  return { ...DEFAULTS, body: { ...DEFAULTS.body }, axles: { fl: { ...DEFAULTS.axles.fl }, fr: { ...DEFAULTS.axles.fr }, rl: { ...DEFAULTS.axles.rl }, rr: { ...DEFAULTS.axles.rr } }, weights: [] };
+  return { ...DEFAULTS, body: { ...DEFAULTS.body }, axles: { fl: { ...DEFAULTS.axles.fl }, fr: { ...DEFAULTS.axles.fr }, rl: { ...DEFAULTS.axles.rl }, rr: { ...DEFAULTS.axles.rr } }, weights: [], plannerItems: [] };
 }
 
 function saveState() {
@@ -1774,7 +1860,8 @@ const axleMat = new THREE.MeshStandardMaterial({
 });
 const weightColors = {
   tungsten: 0xb8860b, tungsten_cylinder: 0xb8860b,
-  lead_strip: 0x888888, steel_bbs: 0x666680, custom: 0xdc2626
+  lead_strip: 0x888888, steel_bbs: 0x666680, custom: 0xdc2626,
+  putty: 0xc4a035, plate: 0xb8860b, lead: 0x888888, bb: 0x666680
 };
 const cogMat = new THREE.MeshStandardMaterial({
   color: 0xff0000,
@@ -2069,13 +2156,32 @@ function buildCar() {
   // Weights
   state.weights.forEach(w => {
     let geo, verticalExtent;
-    if (w.type === 'tungsten_cylinder') {
+    const catItem = w.catalogId ? WEIGHT_CATALOG[w.catalogId] : null;
+
+    if (catItem && catItem.dims) {
+      // Use catalog dimensions for precise geometry
+      if (catItem.shape === 'box') {
+        geo = new THREE.BoxGeometry(catItem.dims.x, catItem.dims.y, catItem.dims.z);
+        verticalExtent = catItem.dims.y;
+      } else if (catItem.shape === 'cyl') {
+        geo = new THREE.CylinderGeometry(catItem.dims.d / 2, catItem.dims.d / 2, catItem.dims.l, 16);
+        geo.rotateZ(Math.PI / 2);
+        verticalExtent = catItem.dims.d;
+      } else if (catItem.shape === 'sphere') {
+        geo = new THREE.SphereGeometry(catItem.dims.d / 2, 16, 16);
+        verticalExtent = catItem.dims.d;
+      } else {
+        // putty: heuristic sizing
+        const size = Math.pow(w.weight * 0.3, 1 / 3) * 0.6 || 0.2;
+        geo = new THREE.BoxGeometry(size * 1.5, size * 0.5, size);
+        verticalExtent = size * 0.5;
+      }
+    } else if (w.type === 'tungsten_cylinder') {
       const d = w.diameter || 0.25;
       const l = w.rodLength || (w.weight / (CONFIG.densityTungsten * Math.PI * (d / 2) * (d / 2)));
       geo = new THREE.CylinderGeometry(d / 2, d / 2, l, 16);
-      // CylinderGeometry axis is Y; rotate so axis aligns with X (along car length)
       geo.rotateZ(Math.PI / 2);
-      verticalExtent = d; // cross-section diameter determines how much vertical space it occupies
+      verticalExtent = d;
     } else {
       const size = Math.pow(w.weight * 0.3, 1 / 3) * 0.6 || 0.2;
       if (w.type === 'lead_strip') {
@@ -2089,7 +2195,8 @@ function buildCar() {
         verticalExtent = size;
       }
     }
-    const wColor = weightColors[w.type] || 0xdc2626;
+    const catColor = catItem ? (weightColors[catItem.cat] || 0xdc2626) : null;
+    const wColor = catColor || weightColors[w.type] || 0xdc2626;
     const mat = new THREE.MeshStandardMaterial({
       color: wColor,
       metalness: 0.7, roughness: 0.2,
@@ -2163,7 +2270,7 @@ function calculateCoG() {
   let cavityWeight = 0, cavityMomentX = 0, cavityMomentZ = 0;
   state.weights.forEach(w => {
     if (w.embedded) {
-      const density = getMaterialDensity(w.type);
+      const density = getMaterialDensity(w.type, w.catalogId);
       if (density > 0) {
         const displacedVol = w.weight / density;
         const displacedWood = displacedVol * woodDensity;
@@ -2194,6 +2301,13 @@ function calculateCoG() {
     totalWeight += w.weight;
   });
 
+  // --- Misc weight (paint, glue, etc.) ---
+  if (state.miscWeight > 0) {
+    const miscWx = state.miscWeightX - halfL;
+    sumX += miscWx * state.miscWeight;
+    totalWeight += state.miscWeight;
+  }
+
   return {
     x: totalWeight > 0 ? sumX / totalWeight : 0,
     y: 0,
@@ -2207,7 +2321,7 @@ function estimateWoodWeight() {
   let displacedVol = 0;
   state.weights.forEach(w => {
     if (w.embedded) {
-      const density = getMaterialDensity(w.type);
+      const density = getMaterialDensity(w.type, w.catalogId);
       if (density > 0) displacedVol += w.weight / density;
     }
   });
@@ -2241,7 +2355,8 @@ function getProfileHeight(xFromFront) {
   return rearHeight + (state.body.tailHeight - rearHeight) * tRear;
 }
 
-function getMaterialDensity(type) {
+function getMaterialDensity(type, catalogId) {
+  if (catalogId && WEIGHT_CATALOG[catalogId]) return WEIGHT_CATALOG[catalogId].density;
   if (type === 'tungsten' || type === 'tungsten_cylinder') return CONFIG.densityTungsten;
   if (type === 'lead_strip') return CONFIG.densityLead;
   if (type === 'steel_bbs') return CONFIG.densitySteel;
@@ -2443,6 +2558,7 @@ function toggleAddForm() {
     // Save current view mode and enter X-Ray
     viewModeBeforeForm = { xray: xrayMode, cutaway: cutawayMode };
     if (!xrayMode) toggleXRay();
+    initCatalogForm();
     previewWeight(); // start preview
   } else {
     // Remove preview and restore view mode
@@ -2473,65 +2589,220 @@ function previewWeight() {
   const form = document.getElementById('add-form');
   if (!form.classList.contains('show')) return;
 
-  const type = document.getElementById('wf-type').value;
+  const type = getFormType();
+  const catalogId = currentCatalogId;
   const x = parseFloat(document.getElementById('wf-x').value);
   const y = parseFloat(document.getElementById('wf-y').value);
   const embedded = document.getElementById('wf-embedded').checked;
-  let weight;
-  if (type === 'tungsten_cylinder') {
-    const d = parseFloat(document.getElementById('wf-diameter').value);
-    const l = parseFloat(document.getElementById('wf-rodlength').value);
-    weight = Math.PI * (d / 2) * (d / 2) * l * CONFIG.densityTungsten;
-  } else {
-    weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const qty = parseInt(document.getElementById('wf-qty').value) || 1;
+
+  // Build catalog-aware weight props
+  const catItem = catalogId ? WEIGHT_CATALOG[catalogId] : null;
+  const extraProps = { catalogId: catalogId || undefined };
+  if (catItem && catItem.shape === 'cyl' && catItem.dims) {
+    extraProps.diameter = catItem.dims.d;
+    extraProps.rodLength = catItem.dims.l;
   }
 
   if (editingWeightId !== null) {
-    // When editing, update the actual weight live
     const w = state.weights.find(item => item.id === editingWeightId);
     if (w) {
-      w.x = x; w.y = y; w.weight = weight; w.type = type; w.embedded = embedded;
-      if (type === 'tungsten_cylinder') {
-        w.diameter = parseFloat(document.getElementById('wf-diameter').value);
-        w.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
-      }
+      Object.assign(w, { x, y, weight, type, embedded, ...extraProps });
     }
   } else {
-    // Add or update preview weight
     if (previewWeightId !== null) {
       const pw = state.weights.find(item => item.id === previewWeightId);
       if (pw) {
-        pw.x = x; pw.y = y; pw.weight = weight; pw.type = type; pw.embedded = embedded;
-        if (type === 'tungsten_cylinder') {
-          pw.diameter = parseFloat(document.getElementById('wf-diameter').value);
-          pw.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
-        }
+        Object.assign(pw, { x, y, weight, type, embedded, ...extraProps });
       }
     } else if (weight > 0) {
       previewWeightId = -999;
-      state.weights.push({ id: previewWeightId, name: '(preview)', type, weight, x, y, embedded,
-        diameter: type === 'tungsten_cylinder' ? parseFloat(document.getElementById('wf-diameter').value) : undefined,
-        rodLength: type === 'tungsten_cylinder' ? parseFloat(document.getElementById('wf-rodlength').value) : undefined
-      });
+      state.weights.push({ id: previewWeightId, name: '(preview)', type, weight, x, y, embedded, ...extraProps });
     }
   }
   rebuildAll();
 }
 
-function updateCylinderFields() {
-  const isCylinder = document.getElementById('wf-type').value === 'tungsten_cylinder';
-  document.getElementById('wf-diameter-row').style.display = isCylinder ? '' : 'none';
-  document.getElementById('wf-rodlength-row').style.display = isCylinder ? '' : 'none';
-  document.getElementById('wf-weight-row').style.display = isCylinder ? 'none' : '';
-  if (isCylinder) computeRodWeight();
+// Legacy support functions (kept for migration)
+function updateCylinderFields() {}
+function computeRodWeight() {}
+
+// ===== CATALOG FORM FUNCTIONS =====
+let currentCatalogId = null;
+
+function initCatalogForm() {
+  const catSel = document.getElementById('wf-category');
+  catSel.innerHTML = CATALOG_CATEGORIES.map(c =>
+    `<option value="${c.key}">${c.label}</option>`
+  ).join('');
+  updateCatalogProducts();
 }
 
-function computeRodWeight() {
-  const d = parseFloat(document.getElementById('wf-diameter').value);
-  const l = parseFloat(document.getElementById('wf-rodlength').value);
-  const weight = Math.PI * (d / 2) * (d / 2) * l * CONFIG.densityTungsten;
-  document.getElementById('wf-weight').value = weight.toFixed(3);
-  document.getElementById('wf-rodweight-display').textContent = '= ' + weight.toFixed(2) + ' oz';
+function updateCatalogProducts() {
+  const cat = document.getElementById('wf-category').value;
+  const prodSel = document.getElementById('wf-product');
+  const items = Object.entries(WEIGHT_CATALOG).filter(([k, v]) => v.cat === cat);
+  prodSel.innerHTML = items.map(([id, item]) => {
+    const wt = getCatalogWeight(id);
+    const wtText = wt > 0 ? ` — ${wt.toFixed(3)} oz` : '';
+    return `<option value="${id}">${item.name}${wtText}</option>`;
+  }).join('');
+  selectCatalogProduct();
+}
+
+function selectCatalogProduct() {
+  const id = document.getElementById('wf-product').value;
+  currentCatalogId = id;
+  const item = WEIGHT_CATALOG[id];
+  if (!item) return;
+
+  const weightInput = document.getElementById('wf-weight');
+  const weightNote = document.getElementById('wf-weight-note');
+  const dimsDisplay = document.getElementById('wf-dims-display');
+  const qtyRow = document.getElementById('wf-qty-row');
+
+  // Show qty for BBs and small items
+  qtyRow.style.display = (item.cat === 'bb') ? '' : 'none';
+  if (item.cat !== 'bb') document.getElementById('wf-qty').value = 1;
+
+  // Set weight
+  const qty = parseInt(document.getElementById('wf-qty').value) || 1;
+  const unitWeight = getCatalogWeight(id);
+  if (item.userWeight) {
+    weightInput.readOnly = false;
+    weightInput.style.opacity = '1';
+    weightNote.textContent = '(enter weight)';
+    if (!weightInput.value || parseFloat(weightInput.value) === 0) weightInput.value = '0.25';
+  } else {
+    const totalWt = unitWeight * qty;
+    weightInput.value = totalWt.toFixed(3);
+    weightInput.readOnly = true;
+    weightInput.style.opacity = '0.7';
+    weightNote.textContent = '(from catalog)';
+  }
+
+  // Dims display
+  dimsDisplay.textContent = getCatalogDimsText(id);
+
+  // Default embedded state
+  document.getElementById('wf-embedded').checked = item.embed;
+
+  updateNetWeightDisplay();
+  checkBodyFit();
+  previewWeight();
+}
+
+function updateQtyWeight() {
+  const id = currentCatalogId;
+  const item = WEIGHT_CATALOG[id];
+  if (!item || item.userWeight) return;
+  const qty = parseInt(document.getElementById('wf-qty').value) || 1;
+  const unitWeight = getCatalogWeight(id);
+  document.getElementById('wf-weight').value = (unitWeight * qty).toFixed(3);
+}
+
+function updateNetWeightDisplay() {
+  const el = document.getElementById('wf-net-weight');
+  const embedded = document.getElementById('wf-embedded').checked;
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const id = currentCatalogId;
+
+  if (!embedded || weight <= 0) { el.textContent = ''; return; }
+
+  const density = id && WEIGHT_CATALOG[id] ? WEIGHT_CATALOG[id].density : getMaterialDensity('tungsten');
+  if (density <= 0) { el.textContent = ''; return; }
+
+  const woodDensity = getWoodDensity();
+  const displacedVol = weight / density;
+  const displacedWood = displacedVol * woodDensity;
+  const netAdd = weight - displacedWood;
+
+  el.innerHTML = `Net +${netAdd.toFixed(3)} oz (displaces ${displacedWood.toFixed(3)} oz wood)`;
+  el.style.color = 'var(--text-dim)';
+}
+
+function getFormType() {
+  // Map catalog category back to legacy type for weight objects
+  const id = currentCatalogId;
+  if (!id) return 'custom';
+  const item = WEIGHT_CATALOG[id];
+  if (!item) return 'custom';
+  if (item.cat === 'cube') return 'tungsten';
+  if (item.cat === 'rod') return 'tungsten_cylinder';
+  if (item.cat === 'lead' || item.cat === 'plate') return 'lead_strip';
+  if (item.cat === 'bb') return 'steel_bbs';
+  if (item.cat === 'putty') return 'tungsten';
+  return 'custom';
+}
+
+function getWeightVerticalExtent(catalogId, weight) {
+  const item = catalogId ? WEIGHT_CATALOG[catalogId] : null;
+  if (item && item.dims) {
+    if (item.shape === 'box') return item.dims.y;
+    if (item.shape === 'cyl') return item.dims.d;
+    if (item.shape === 'sphere') return item.dims.d;
+  }
+  // Fallback: estimate from weight
+  return Math.pow((weight || 0.25) * 0.3, 1/3) * 0.6 || 0.2;
+}
+
+function getWeightLengthExtent(catalogId, weight) {
+  const item = catalogId ? WEIGHT_CATALOG[catalogId] : null;
+  if (item && item.dims) {
+    if (item.shape === 'box') return item.dims.x;
+    if (item.shape === 'cyl') return item.dims.l;
+    if (item.shape === 'sphere') return item.dims.d;
+  }
+  return Math.pow((weight || 0.25) * 0.3, 1/3) * 0.6 || 0.2;
+}
+
+function checkBodyFit() {
+  const warningEl = document.getElementById('wf-fit-warning');
+  if (!warningEl) return;
+  warningEl.innerHTML = '';
+
+  const embedded = document.getElementById('wf-embedded').checked;
+  if (!embedded) return;
+
+  const x = parseFloat(document.getElementById('wf-x').value);
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
+  const id = currentCatalogId;
+  const { length, width } = state.body;
+
+  const vExt = getWeightVerticalExtent(id, weight);
+  const lExt = getWeightLengthExtent(id, weight);
+
+  const warnings = [];
+
+  // Check body height across the weight's length span
+  const startX = Math.max(0, x - lExt / 2);
+  const endX = Math.min(length, x + lExt / 2);
+  const samples = 5;
+  for (let i = 0; i <= samples; i++) {
+    const sx = startX + (endX - startX) * (i / samples);
+    const h = getProfileHeight(sx);
+    if (h < vExt) {
+      warnings.push(`Body too shallow at ${sx.toFixed(1)}" (${h.toFixed(2)}" height) for ${vExt.toFixed(3)}" embedded weight`);
+      break;
+    }
+  }
+
+  // Check if weight extends past body length
+  if (x - lExt / 2 < 0) warnings.push('Weight extends past front of car');
+  if (x + lExt / 2 > length) warnings.push('Weight extends past rear of car');
+
+  // Check width for rods
+  const item = id ? WEIGHT_CATALOG[id] : null;
+  if (item && item.shape === 'cyl' && item.dims && item.dims.l > width) {
+    warnings.push(`Rod length (${item.dims.l}") exceeds body width (${width.toFixed(2)}")`);
+  }
+
+  if (warnings.length > 0) {
+    warningEl.innerHTML = warnings.map(w =>
+      `<div style="color:var(--amber);padding:2px 0;">&#9888; ${w}</div>`
+    ).join('');
+  }
 }
 
 function formatDiameter(d) {
@@ -2542,11 +2813,14 @@ function formatDiameter(d) {
 }
 
 function addWeight() {
-  const name = document.getElementById('wf-name').value || ('Weight ' + state.nextId);
-  const type = document.getElementById('wf-type').value;
+  const type = getFormType();
+  const catalogId = currentCatalogId;
+  const catItem = catalogId ? WEIGHT_CATALOG[catalogId] : null;
+  const name = document.getElementById('wf-name').value || (catItem ? catItem.name : 'Weight ' + state.nextId);
   const x = parseFloat(document.getElementById('wf-x').value);
   const y = parseFloat(document.getElementById('wf-y').value);
   const embedded = document.getElementById('wf-embedded').checked;
+  const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
 
   // Remove preview weight first
   if (previewWeightId !== null) {
@@ -2554,34 +2828,25 @@ function addWeight() {
     previewWeightId = null;
   }
 
+  const extraProps = { catalogId: catalogId || undefined };
+  if (catItem && catItem.shape === 'cyl' && catItem.dims) {
+    extraProps.diameter = catItem.dims.d;
+    extraProps.rodLength = catItem.dims.l;
+  }
+
   if (editingWeightId !== null) {
-    // Update existing weight
     const w = state.weights.find(item => item.id === editingWeightId);
     if (w) {
-      w.name = name; w.type = type; w.x = x; w.y = y; w.embedded = embedded;
-      if (type === 'tungsten_cylinder') {
-        w.diameter = parseFloat(document.getElementById('wf-diameter').value);
-        w.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
-        w.weight = Math.PI * (w.diameter / 2) * (w.diameter / 2) * w.rodLength * CONFIG.densityTungsten;
-      } else {
-        w.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
-      }
+      Object.assign(w, { name, type, x, y, embedded, weight, ...extraProps });
     }
     editingWeightId = null;
   } else {
-    // Add new weight
-    const obj = { id: state.nextId++, name, type, x, y, embedded };
-    if (type === 'tungsten_cylinder') {
-      obj.diameter = parseFloat(document.getElementById('wf-diameter').value);
-      obj.rodLength = parseFloat(document.getElementById('wf-rodlength').value);
-      obj.weight = Math.PI * (obj.diameter / 2) * (obj.diameter / 2) * obj.rodLength * CONFIG.densityTungsten;
-    } else {
-      obj.weight = parseFloat(document.getElementById('wf-weight').value) || 0;
-    }
-    state.weights.push(obj);
+    state.weights.push({ id: state.nextId++, name, type, weight, x, y, embedded, ...extraProps });
   }
   document.getElementById('wf-name').value = '';
   document.getElementById('wf-embedded').checked = false;
+  document.getElementById('wf-net-weight').textContent = '';
+  document.getElementById('wf-fit-warning').innerHTML = '';
   // Close form and restore view mode
   document.getElementById('add-form').classList.remove('show');
   document.getElementById('add-weight-btn').textContent = '+ Add Weight';
@@ -2603,20 +2868,32 @@ function editWeight(id) {
   if (!w) return;
   editingWeightId = id;
   document.getElementById('wf-name').value = w.name;
-  document.getElementById('wf-type').value = w.type;
-  updateCylinderFields();
-  if (w.type === 'tungsten_cylinder') {
-    document.getElementById('wf-diameter').value = w.diameter || 0.25;
-    document.getElementById('wf-rodlength').value = w.rodLength || 2;
-    computeRodWeight();
+
+  // Restore catalog selections if weight has catalogId
+  if (w.catalogId && WEIGHT_CATALOG[w.catalogId]) {
+    const catItem = WEIGHT_CATALOG[w.catalogId];
+    document.getElementById('wf-category').value = catItem.cat;
+    updateCatalogProducts();
+    document.getElementById('wf-product').value = w.catalogId;
+    currentCatalogId = w.catalogId;
   } else {
-    document.getElementById('wf-weight').value = w.weight;
+    // Legacy weight: map type to category
+    const catMap = { tungsten: 'cube', tungsten_cylinder: 'rod', lead_strip: 'lead', steel_bbs: 'bb', custom: 'custom' };
+    document.getElementById('wf-category').value = catMap[w.type] || 'custom';
+    updateCatalogProducts();
+    currentCatalogId = document.getElementById('wf-product').value;
   }
+
+  document.getElementById('wf-weight').value = w.weight;
+  document.getElementById('wf-weight').readOnly = false;
+  document.getElementById('wf-weight').style.opacity = '1';
   document.getElementById('wf-x').value = w.x;
   document.getElementById('wf-y').value = w.y;
   document.getElementById('wf-x-val').textContent = w.x.toFixed(1) + '"';
   document.getElementById('wf-y-val').textContent = w.y.toFixed(1) + '"';
   document.getElementById('wf-embedded').checked = w.embedded;
+  updateNetWeightDisplay();
+  checkBodyFit();
   const form = document.getElementById('add-form');
   if (!form.classList.contains('show')) {
     viewModeBeforeForm = { xray: xrayMode, cutaway: cutawayMode };
@@ -2631,19 +2908,19 @@ function autoOptimizeX() {
   const { length } = state.body;
   const halfL = length / 2;
   const weight = parseFloat(document.getElementById('wf-weight').value) || 0;
-  const type = document.getElementById('wf-type').value;
+  const type = getFormType();
   const embedded = document.getElementById('wf-embedded').checked;
   if (weight <= 0) { alert('Enter a weight first.'); return; }
 
   const cog = calculateCoG();
   const currentCogX = cog.x;
-  const currentTotal = estimateWoodWeight() + state.wheelAxleWeight + state.weights.reduce((s, w) => s + w.weight, 0);
+  const currentTotal = estimateWoodWeight() + state.wheelAxleWeight + (state.miscWeight || 0) + state.weights.reduce((s, w) => s + w.weight, 0);
   const targetCogX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
 
   // Effective weight accounts for wood displacement if embedded
   let effectiveWeight = weight;
   if (embedded) {
-    const density = getMaterialDensity(type);
+    const density = getMaterialDensity(type, currentCatalogId);
     if (density > 0) {
       const woodDensity = getWoodDensity();
       effectiveWeight = weight - (weight / density) * woodDensity;
@@ -2672,7 +2949,8 @@ function applyAutoWeight() {
   const realWeights = state.weights.filter(w => w.id !== previewWeightId);
   const woodWt = estimateWoodWeight();
   const addedWt = realWeights.reduce((s, w) => s + w.weight, 0);
-  const currentTotal = woodWt + addedWt + state.wheelAxleWeight;
+  const miscWt = state.miscWeight || 0;
+  const currentTotal = woodWt + addedWt + state.wheelAxleWeight + miscWt;
   const remaining = state.maxWeight - currentTotal;
 
   if (remaining <= 0.01) {
@@ -2698,9 +2976,12 @@ function applyAutoWeight() {
 
   // Pre-fill the add form with these values
   document.getElementById('wf-name').value = 'Auto ballast';
-  document.getElementById('wf-type').value = 'tungsten';
-  updateCylinderFields();
+  initCatalogForm();
+  document.getElementById('wf-category').value = 'cube';
+  updateCatalogProducts();
   document.getElementById('wf-weight').value = remaining.toFixed(3);
+  document.getElementById('wf-weight').readOnly = false;
+  document.getElementById('wf-weight').style.opacity = '1';
   document.getElementById('wf-x').value = clamped.toFixed(1);
   document.getElementById('wf-x-val').textContent = clamped.toFixed(1) + '"';
   document.getElementById('wf-y').value = '0';
@@ -2721,7 +3002,8 @@ function updateAutoWeightDisplay() {
   const realWeights = state.weights.filter(w => w.id !== previewWeightId);
   const woodWt = estimateWoodWeight();
   const addedWt = realWeights.reduce((s, w) => s + w.weight, 0);
-  const currentTotal = woodWt + addedWt + state.wheelAxleWeight;
+  const miscWt = state.miscWeight || 0;
+  const currentTotal = woodWt + addedWt + state.wheelAxleWeight + miscWt;
   const remaining = state.maxWeight - currentTotal;
   const btn = document.getElementById('auto-weight-btn');
   if (remaining > 0.01) {
@@ -2740,24 +3022,33 @@ function renderWeightList() {
     list.innerHTML = '<p style="font-family:\'Share Tech Mono\',monospace;font-size:0.72rem;color:var(--text-muted);padding:12px 0;letter-spacing:0.5px;">No weights added. Click "+ Add Weight" to begin.</p>';
     return;
   }
-  list.innerHTML = visible.map((w, i) => `
-    <div class="weight-item" style="animation-delay:${i * 0.05}s">
+  list.innerHTML = visible.map((w, i) => {
+    let desc;
+    if (w.catalogId && WEIGHT_CATALOG[w.catalogId]) {
+      desc = WEIGHT_CATALOG[w.catalogId].name;
+    } else if (w.type === 'tungsten_cylinder' && w.diameter) {
+      desc = formatDiameter(w.diameter) + ' × ' + w.rodLength + '" rod';
+    } else {
+      desc = w.type.replace('_', ' ');
+    }
+    return `<div class="weight-item" style="animation-delay:${i * 0.05}s">
       <div class="info">
         <span class="name">${w.name}</span>
-        <span class="detail">${w.type === 'tungsten_cylinder' && w.diameter ? formatDiameter(w.diameter) + ' × ' + w.rodLength + '" rod' : w.type.replace('_', ' ')} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front${w.embedded ? ' [EMB]' : ''}</span>
+        <span class="detail">${desc} // ${w.weight.toFixed(2)} oz // ${w.x.toFixed(1)}" from front${w.embedded ? ' [EMB]' : ''}</span>
       </div>
       <div class="actions">
         <button class="btn btn-secondary btn-sm" onclick="editWeight(${w.id})">EDIT</button>
         <button class="btn btn-secondary btn-sm" onclick="removeWeight(${w.id})">DEL</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function updateWeightDisplay() {
   const woodWt = estimateWoodWeight();
   const addedWt = state.weights.reduce((s, w) => s + w.weight, 0);
-  const total = woodWt + addedWt + state.wheelAxleWeight;
+  const miscWt = state.miscWeight || 0;
+  const total = woodWt + addedWt + state.wheelAxleWeight + miscWt;
   const remaining = state.maxWeight - total;
   const pct = Math.min(100, (total / state.maxWeight) * 100);
 
@@ -2783,6 +3074,24 @@ function updateWeightDisplay() {
   document.getElementById('val-removed').textContent = (state.rawWoodWeight - woodWt).toFixed(2) + ' oz';
   document.getElementById('wt-wood').textContent = woodWt.toFixed(2) + ' oz';
   document.getElementById('wt-added').textContent = addedWt.toFixed(2) + ' oz';
+
+  // Displacement display
+  const woodDensity = getWoodDensity();
+  let totalDisplaced = 0;
+  state.weights.forEach(w => {
+    if (w.embedded) {
+      const density = getMaterialDensity(w.type, w.catalogId);
+      if (density > 0) totalDisplaced += (w.weight / density) * woodDensity;
+    }
+  });
+  const displacedRow = document.getElementById('wt-displaced-row');
+  if (totalDisplaced > 0.001) {
+    displacedRow.style.display = '';
+    document.getElementById('wt-displaced').textContent = '-' + totalDisplaced.toFixed(2) + ' oz';
+  } else {
+    displacedRow.style.display = 'none';
+  }
+
   document.getElementById('wt-total').textContent = total.toFixed(2) + ' oz';
   document.getElementById('wt-total').style.color = total > state.maxWeight ? 'var(--race-red)' : 'var(--green)';
   document.getElementById('wt-remaining').textContent = remaining >= 0 ? remaining.toFixed(2) + ' oz' : 'OVER by ' + Math.abs(remaining).toFixed(2) + ' oz';
@@ -2815,7 +3124,7 @@ function updateWeightDisplay() {
 
 function updateRules() {
   const { length, width, rearHeight, frontHeight } = state.body;
-  const total = estimateWoodWeight() + state.weights.reduce((s, w) => s + w.weight, 0) + state.wheelAxleWeight;
+  const total = estimateWoodWeight() + state.weights.reduce((s, w) => s + w.weight, 0) + state.wheelAxleWeight + (state.miscWeight || 0);
   const clearance = CONFIG.wheelDiameter / 2 - getEffectiveAxleHeight();
 
   const rules = [
@@ -2846,6 +3155,18 @@ function updateWheelAxleWeight() {
   rebuildAll();
 }
 
+function updateMiscWeight() {
+  state.miscWeight = parseFloat(document.getElementById('misc-weight').value) || 0;
+  document.getElementById('misc-weight-x-row').style.display = state.miscWeight > 0 ? '' : 'none';
+  rebuildAll();
+}
+
+function updateMiscWeightX(val) {
+  state.miscWeightX = parseFloat(val);
+  document.getElementById('misc-weight-x-val').textContent = state.miscWeightX.toFixed(1) + '"';
+  rebuildAll();
+}
+
 function updateAxleMountType(type) {
   state.axleMountType = type;
   document.getElementById('drilled-options').style.display = type === 'drilled' ? 'block' : 'none';
@@ -2863,11 +3184,231 @@ function updateDrilledHeight(val) {
   rebuildAll();
 }
 
+// ===== WEIGHT PLANNER =====
+let plannerResults = []; // [{catalogId, weight, x, fit}]
+
+function initPlannerDropdowns() {
+  const catSel = document.getElementById('planner-add-cat');
+  if (!catSel) return;
+  catSel.innerHTML = CATALOG_CATEGORIES.filter(c => c.key !== 'custom').map(c =>
+    `<option value="${c.key}">${c.label}</option>`
+  ).join('');
+  updatePlannerProductOptions();
+}
+
+function updatePlannerProductOptions() {
+  const cat = document.getElementById('planner-add-cat').value;
+  const prodSel = document.getElementById('planner-add-product');
+  const items = Object.entries(WEIGHT_CATALOG).filter(([k, v]) => v.cat === cat && !v.userWeight);
+  prodSel.innerHTML = items.map(([id, item]) => {
+    const wt = getCatalogWeight(id);
+    return `<option value="${id}">${item.name} — ${wt.toFixed(3)} oz</option>`;
+  }).join('');
+  // Also show user-weight items
+  const userItems = Object.entries(WEIGHT_CATALOG).filter(([k, v]) => v.cat === cat && v.userWeight);
+  userItems.forEach(([id, item]) => {
+    prodSel.innerHTML += `<option value="${id}">${item.name}</option>`;
+  });
+}
+
+function addPlannerItem() {
+  const catalogId = document.getElementById('planner-add-product').value;
+  if (!catalogId) return;
+  if (!state.plannerItems) state.plannerItems = [];
+  state.plannerItems.push({ catalogId, qty: 1, customWeight: null });
+  renderPlanner();
+  saveState();
+}
+
+function removePlannerItem(index) {
+  state.plannerItems.splice(index, 1);
+  plannerResults = [];
+  renderPlanner();
+  saveState();
+}
+
+function updatePlannerQty(index, val) {
+  state.plannerItems[index].qty = Math.max(1, parseInt(val) || 1);
+  renderPlanner();
+  saveState();
+}
+
+function updatePlannerCustomWeight(index, val) {
+  state.plannerItems[index].customWeight = parseFloat(val) || 0;
+  renderPlanner();
+  saveState();
+}
+
+function getPlannerItemWeight(item) {
+  const catWt = getCatalogWeight(item.catalogId);
+  if (catWt > 0) return catWt * (item.qty || 1);
+  return (item.customWeight || 0) * (item.qty || 1);
+}
+
+function renderPlanner() {
+  const realWeights = state.weights.filter(w => w.id !== previewWeightId);
+  const woodWt = estimateWoodWeight();
+  const addedWt = realWeights.reduce((s, w) => s + w.weight, 0);
+  const miscWt = state.miscWeight || 0;
+  const currentTotal = woodWt + addedWt + state.wheelAxleWeight + miscWt;
+  const remaining = state.maxWeight - currentTotal;
+
+  const budgetEl = document.getElementById('planner-budget');
+  budgetEl.innerHTML = `Budget: <span style="color:${remaining >= 0 ? 'var(--amber)' : 'var(--race-red)'}">${remaining.toFixed(2)} oz</span> remaining`;
+
+  const itemsEl = document.getElementById('planner-items');
+  if (!state.plannerItems || state.plannerItems.length === 0) {
+    itemsEl.innerHTML = '<div style="font-size:0.72rem;color:var(--text-muted);padding:4px 0;">No items in plan. Add products below.</div>';
+  } else {
+    itemsEl.innerHTML = state.plannerItems.map((item, i) => {
+      const cat = WEIGHT_CATALOG[item.catalogId];
+      const name = cat ? cat.name : item.catalogId;
+      const wt = getPlannerItemWeight(item);
+      const isUserWeight = cat && cat.userWeight;
+      const result = plannerResults[i];
+      const fitWarn = result && !result.fit ? ' <span style="color:var(--amber)">&#9888;</span>' : '';
+      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);font-size:0.78rem;">
+        <span style="flex:1;color:var(--text);">${name}${fitWarn}</span>
+        ${isUserWeight ? `<input type="number" value="${item.customWeight || 0}" step="0.01" min="0" max="3" style="width:60px;" oninput="updatePlannerCustomWeight(${i},this.value)">` : ''}
+        ${cat && cat.cat === 'bb' ? `<input type="number" value="${item.qty}" min="1" max="50" style="width:42px;" oninput="updatePlannerQty(${i},this.value)">` : ''}
+        <span style="color:var(--amber);font-family:'Share Tech Mono',monospace;min-width:55px;text-align:right;">${wt.toFixed(2)} oz</span>
+        <button class="btn btn-secondary btn-sm" onclick="removePlannerItem(${i})" style="padding:2px 6px;font-size:0.65rem;">X</button>
+      </div>`;
+    }).join('');
+  }
+
+  const planTotal = (state.plannerItems || []).reduce((s, item) => s + getPlannerItemWeight(item), 0);
+  const totalEl = document.getElementById('planner-total');
+  totalEl.innerHTML = `Plan total: <span style="color:var(--amber)">${planTotal.toFixed(2)} oz</span>`;
+
+  const warnEl = document.getElementById('planner-warning');
+  if (planTotal > remaining + 0.01) {
+    warnEl.innerHTML = `<span style="color:var(--race-red);">&#9888; Over budget by ${(planTotal - remaining).toFixed(2)} oz</span>`;
+  } else if (planTotal > 0 && planTotal <= remaining) {
+    warnEl.innerHTML = `<span style="color:var(--green);">Within budget (${(remaining - planTotal).toFixed(2)} oz to spare)</span>`;
+  } else {
+    warnEl.innerHTML = '';
+  }
+
+  // Show/hide apply button based on results
+  document.getElementById('planner-apply-btn').style.display = plannerResults.length > 0 ? '' : 'none';
+
+  // Render results
+  const resultsEl = document.getElementById('planner-results');
+  if (plannerResults.length > 0) {
+    const projectedTotal = currentTotal + plannerResults.reduce((s, r) => s + r.weight, 0);
+    // Compute projected COG
+    let html = plannerResults.map((r, i) => {
+      const icon = r.fit ? '<span style="color:var(--green);">&#10003;</span>' : '<span style="color:var(--amber);">&#9888;</span>';
+      const cat = WEIGHT_CATALOG[r.catalogId];
+      return `<div>${icon} ${cat ? cat.name : r.catalogId} → ${r.x.toFixed(1)}" embedded</div>`;
+    }).join('');
+    html += `<div style="margin-top:4px;color:var(--text-dim);">Projected: ${projectedTotal.toFixed(2)} oz</div>`;
+    resultsEl.innerHTML = html;
+  } else {
+    resultsEl.innerHTML = '';
+  }
+}
+
+function runOptimizer() {
+  if (!state.plannerItems || state.plannerItems.length === 0) return;
+
+  const { length } = state.body;
+  const halfL = length / 2;
+  const woodDensity = getWoodDensity();
+
+  // Current state (without planner weights)
+  const realWeights = state.weights.filter(w => w.id !== previewWeightId);
+  let currentTotal = estimateWoodWeight() + state.wheelAxleWeight + (state.miscWeight || 0) + realWeights.reduce((s, w) => s + w.weight, 0);
+  let currentCogX = calculateCoG().x;
+  const targetCogX = AXLE_REAR_X - CONFIG.cogTargetFromRearAxle;
+
+  // Sort by weight descending (heaviest first for most COG influence)
+  const sorted = state.plannerItems.map((item, i) => ({ ...item, origIndex: i, weight: getPlannerItemWeight(item) }));
+  sorted.sort((a, b) => b.weight - a.weight);
+
+  plannerResults = new Array(state.plannerItems.length);
+
+  sorted.forEach(item => {
+    const weight = item.weight;
+    if (weight <= 0) {
+      plannerResults[item.origIndex] = { catalogId: item.catalogId, weight: 0, x: 3.5, fit: true };
+      return;
+    }
+
+    const cat = WEIGHT_CATALOG[item.catalogId];
+    const density = cat ? cat.density : CONFIG.densityTungsten;
+    const embedded = cat ? cat.embed : true;
+
+    // Effective weight accounts for wood displacement
+    let effectiveWeight = weight;
+    if (embedded && density > 0) {
+      effectiveWeight = weight - (weight / density) * woodDensity;
+    }
+
+    // Solve for optimal x: targetCogX = (currentCogX * currentTotal + wx * effectiveWeight) / (currentTotal + effectiveWeight)
+    const optimalWx = effectiveWeight > 0
+      ? (targetCogX * (currentTotal + effectiveWeight) - currentCogX * currentTotal) / effectiveWeight
+      : 0;
+    const optimalXFromFront = Math.max(0.5, Math.min(length - 0.5, optimalWx + halfL));
+
+    // Check body fit
+    const vExt = getWeightVerticalExtent(item.catalogId, weight);
+    const lExt = getWeightLengthExtent(item.catalogId, weight);
+    let fits = true;
+    if (embedded) {
+      const startX = Math.max(0, optimalXFromFront - lExt / 2);
+      const endX = Math.min(length, optimalXFromFront + lExt / 2);
+      for (let s = 0; s <= 3; s++) {
+        const sx = startX + (endX - startX) * (s / 3);
+        if (getProfileHeight(sx) < vExt) { fits = false; break; }
+      }
+    }
+
+    plannerResults[item.origIndex] = { catalogId: item.catalogId, weight, x: optimalXFromFront, fit: fits };
+
+    // Update running totals for next iteration
+    currentTotal += weight;
+    currentCogX = (currentCogX * (currentTotal - weight) + (optimalXFromFront - halfL) * effectiveWeight) / (currentTotal - weight + effectiveWeight);
+  });
+
+  renderPlanner();
+}
+
+function applyPlacements() {
+  if (plannerResults.length === 0) return;
+
+  plannerResults.forEach((r, i) => {
+    if (r.weight <= 0) return;
+    const cat = WEIGHT_CATALOG[r.catalogId];
+    const type = cat ? (cat.cat === 'cube' ? 'tungsten' : cat.cat === 'rod' ? 'tungsten_cylinder' : cat.cat === 'bb' ? 'steel_bbs' : cat.cat === 'lead' ? 'lead_strip' : 'custom') : 'custom';
+    const embedded = cat ? cat.embed : false;
+    const obj = { id: state.nextId++, name: cat ? cat.name : 'Planned weight', type, weight: r.weight, x: r.x, y: 0, embedded, catalogId: r.catalogId };
+    if (cat && cat.shape === 'cyl' && cat.dims) {
+      obj.diameter = cat.dims.d;
+      obj.rodLength = cat.dims.l;
+    }
+    state.weights.push(obj);
+  });
+
+  // Clear planner
+  state.plannerItems = [];
+  plannerResults = [];
+  renderPlanner();
+  rebuildAll();
+}
+
+function quickFillRemaining() {
+  // Shortcut: fill remaining budget with a single weight, placed optimally
+  applyAutoWeight();
+}
+
 function rebuildAll() {
   buildCar();
   renderWeightList();
   updateWeightDisplay();
   updateAutoWeightDisplay();
+  renderPlanner();
   updateRules();
   saveState();
 }
@@ -2900,6 +3441,9 @@ function snapshotState() {
 }
 
 function applyParsedState(parsed) {
+  if (parsed._v && parsed._v >= 9 && parsed._v < STATE_VERSION) {
+    parsed = migrateState(parsed);
+  }
   if (parsed._v !== STATE_VERSION) {
     Object.assign(state, DEFAULTS, parsed, {
       _v: STATE_VERSION,
@@ -2916,6 +3460,7 @@ function applyParsedState(parsed) {
         rr: { ...DEFAULTS.axles.rr, ...((parsed.axles || {}).rr || {}) },
       },
       weights: parsed.weights || [],
+      plannerItems: parsed.plannerItems || [],
     });
   }
 }
@@ -3174,6 +3719,15 @@ function restoreUI() {
       if (sliders[1]) sliders[1].value = ax.camber;
     }
   }
+
+  // Misc weight
+  document.getElementById('misc-weight').value = (state.miscWeight || 0).toFixed(2);
+  document.getElementById('misc-weight-x').value = state.miscWeightX || 3.5;
+  document.getElementById('misc-weight-x-val').textContent = (state.miscWeightX || 3.5).toFixed(1) + '"';
+  document.getElementById('misc-weight-x-row').style.display = (state.miscWeight || 0) > 0 ? '' : 'none';
+
+  // Planner
+  initPlannerDropdowns();
 }
 restoreUI();
 rebuildAll();
