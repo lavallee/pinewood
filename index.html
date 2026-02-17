@@ -296,55 +296,84 @@
   .hud-bracket.bl { bottom: 12px; left: 12px; border-bottom: 2px solid var(--race-red); border-left: 2px solid var(--race-red); }
   .hud-bracket.br { bottom: 12px; right: 12px; border-bottom: 2px solid var(--race-red); border-right: 2px solid var(--race-red); }
 
-  .view-mode-toggle {
+  /* Top-left: View presets */
+  .viewport-presets {
     position: absolute;
     top: 16px;
     left: 40px;
     z-index: 5;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 3px;
+    gap: 6px;
+    align-items: center;
   }
-  .view-mode-toggle .view-mode-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.55rem;
-    color: var(--text-dim);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    padding-left: 2px;
-  }
-  .view-mode-toggle button {
-    background: rgba(220,38,38,0.15);
+  .viewport-presets .preset-reset {
+    background: rgba(10,10,15,0.8);
     backdrop-filter: blur(8px);
-    border: 1px solid var(--race-red-dim);
-    color: var(--race-red);
-    padding: 8px 18px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px;
     cursor: pointer;
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 2px;
     transition: all 0.2s;
-    text-shadow: 0 0 8px rgba(220,38,38,0.4);
   }
-  .view-mode-toggle button:hover {
-    color: #fff;
+  .viewport-presets .preset-reset:hover {
+    color: var(--text);
     border-color: var(--race-red);
-    background: rgba(220,38,38,0.25);
-    box-shadow: 0 0 12px rgba(220,38,38,0.3);
+    background: rgba(220,38,38,0.1);
+  }
+  .viewport-presets .preset-group {
+    display: flex;
+  }
+  .viewport-presets .preset-group button {
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+    margin-left: -1px;
+  }
+  .viewport-presets .preset-group button:first-child {
+    margin-left: 0;
+    border-radius: 3px 0 0 3px;
+  }
+  .viewport-presets .preset-group button:last-child {
+    border-radius: 0 3px 3px 0;
+  }
+  .viewport-presets .preset-group button:hover {
+    color: var(--text);
+    border-color: var(--race-red);
+    background: rgba(220,38,38,0.1);
+    z-index: 1;
+  }
+  .viewport-presets .preset-group button.active {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(74,222,128,0.1);
+    z-index: 1;
   }
 
-  .viewport-overlay {
+  /* Top-right: Tools */
+  .viewport-tools {
     position: absolute;
-    bottom: 16px;
-    left: 16px;
-    display: flex;
-    gap: 4px;
+    top: 16px;
+    right: 40px;
     z-index: 5;
+    display: flex;
+    gap: 6px;
+    align-items: center;
   }
-  .viewport-overlay button {
+  .viewport-tools button {
     background: rgba(10,10,15,0.8);
     backdrop-filter: blur(8px);
     border: 1px solid var(--border);
@@ -358,7 +387,50 @@
     letter-spacing: 2px;
     transition: all 0.2s;
   }
-  .viewport-overlay button:hover {
+  .viewport-tools button:hover {
+    color: var(--text);
+    border-color: var(--race-red);
+    background: rgba(220,38,38,0.1);
+  }
+  .viewport-tools .spin-toggle.active {
+    color: var(--green);
+    border-color: var(--green);
+    background: rgba(74,222,128,0.1);
+  }
+  .viewport-tools #view-mode-btn {
+    background: rgba(220,38,38,0.15);
+    border-color: var(--race-red-dim);
+    color: var(--race-red);
+    font-weight: 700;
+    text-shadow: 0 0 8px rgba(220,38,38,0.4);
+  }
+  .viewport-tools #view-mode-btn:hover {
+    color: #fff;
+    border-color: var(--race-red);
+    background: rgba(220,38,38,0.25);
+    box-shadow: 0 0 12px rgba(220,38,38,0.3);
+  }
+
+  /* Top-right: Designs button */
+  .viewport-designs-btn {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 5;
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+  .viewport-designs-btn:hover {
     color: var(--text);
     border-color: var(--race-red);
     background: rgba(220,38,38,0.1);
@@ -366,10 +438,10 @@
 
   .viewport-model-label {
     position: absolute;
-    top: 16px;
-    right: 40px;
+    bottom: 16px;
+    left: 40px;
     z-index: 5;
-    text-align: right;
+    text-align: left;
     font-family: 'Share Tech Mono', monospace;
     animation: hud-flicker 8s infinite;
   }
@@ -378,11 +450,6 @@
     font-size: 1.1rem;
     letter-spacing: 3px;
     color: var(--text-dim);
-  }
-  .viewport-model-label .model-spec {
-    font-size: 0.6rem;
-    color: var(--text-muted);
-    letter-spacing: 1px;
   }
 
   /* ======== PANEL ======== */
@@ -905,6 +972,47 @@
     transition: all 0.15s;
   }
   .designs-close:hover { color: var(--text); border-color: var(--border-light); }
+  .designs-name-row {
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+  .designs-name-row input {
+    flex: 1;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .designs-name-row input:focus {
+    border-color: var(--race-red-dim);
+  }
+  .designs-name-row button {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 5px 12px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+  .designs-name-row button:hover {
+    color: var(--text);
+    border-color: var(--border-light);
+    background: var(--bg-card-hover);
+  }
   .designs-list {
     flex: 1;
     overflow-y: auto;
@@ -1075,31 +1183,19 @@
     .weight-gauge-value { font-size: 1rem; min-width: auto; }
 
     /* Viewport HUD — tighter positioning */
-    .view-mode-toggle { top: 8px; left: 8px; }
-    .view-mode-toggle .view-mode-label { font-size: 0.48rem; }
-    .view-mode-toggle button { padding: 5px 10px; font-size: 0.62rem; letter-spacing: 1px; }
-    .viewport-model-label { top: 8px; right: 8px; }
+    .viewport-presets { top: 8px; left: 8px; gap: 4px; }
+    .viewport-presets .preset-reset { padding: 5px 8px; font-size: 0.62rem; letter-spacing: 1px; }
+    .viewport-presets .preset-group button { padding: 5px 8px; font-size: 0.62rem; letter-spacing: 1px; }
+    .viewport-tools { top: 8px; right: 8px; gap: 4px; }
+    .viewport-tools button { padding: 5px 10px; font-size: 0.62rem; letter-spacing: 1px; }
+    .viewport-designs-btn { bottom: 6px; right: 6px; padding: 5px 10px; font-size: 0.62rem; letter-spacing: 1px; }
+    .viewport-model-label { bottom: 6px; left: 8px; }
     .viewport-model-label .model-name { font-size: 0.85rem; letter-spacing: 2px; }
-    .viewport-model-label .model-spec { font-size: 0.5rem; }
     .hud-bracket { width: 14px; height: 14px; }
     .hud-bracket.tl { top: 6px; left: 6px; }
     .hud-bracket.tr { top: 6px; right: 6px; }
     .hud-bracket.bl { bottom: 6px; left: 6px; }
     .hud-bracket.br { bottom: 6px; right: 6px; }
-
-    /* Viewport buttons — wrap into rows */
-    .viewport-overlay {
-      bottom: 6px;
-      left: 6px;
-      right: 6px;
-      flex-wrap: wrap;
-      gap: 3px;
-    }
-    .viewport-overlay button {
-      padding: 8px 10px;
-      font-size: 0.62rem;
-      letter-spacing: 1px;
-    }
 
     /* Tabs — slightly smaller */
     .tabs button {
@@ -1224,7 +1320,10 @@
     header h1 .dim { font-size: 0.45rem; }
     .weight-gauge-value { font-size: 0.9rem; }
     .header-cog-value { font-size: 0.75rem; }
-    .viewport-overlay button { padding: 7px 8px; font-size: 0.58rem; }
+    .viewport-presets .preset-reset { padding: 4px 6px; font-size: 0.58rem; }
+    .viewport-presets .preset-group button { padding: 4px 6px; font-size: 0.58rem; }
+    .viewport-tools button { padding: 4px 8px; font-size: 0.58rem; }
+    .viewport-designs-btn { padding: 4px 8px; font-size: 0.58rem; }
     .tabs button { font-size: 0.58rem; letter-spacing: 0.5px; }
   }
 </style>
@@ -1276,19 +1375,24 @@
     <div class="hud-bracket br"></div>
     <div class="viewport-model-label" onclick="openDesignsModal()" style="cursor:pointer">
       <div class="model-name" id="config-name-display">BSA BLOCK</div>
-      <div class="model-spec" id="model-spec">7.00 × 1.75 × 0.45 in</div>
     </div>
-    <div class="view-mode-toggle" id="view-mode-toggle">
-      <span class="view-mode-label" id="view-mode-label">FULL</span>
-      <button id="view-mode-btn" onclick="cycleViewMode()">X-RAY</button>
+    <button class="viewport-designs-btn" onclick="openDesignsModal()">Load / Save Designs</button>
+    <!-- Top-left: View presets -->
+    <div class="viewport-presets">
+      <button onclick="resetCamera()" class="preset-reset">Reset</button>
+      <div class="preset-group">
+        <button onclick="setView('top')" id="preset-top">Top</button>
+        <button onclick="setView('side')" id="preset-side">Side</button>
+        <button onclick="setView('front')" id="preset-front">Front</button>
+      </div>
     </div>
-    <div class="viewport-overlay">
-      <button onclick="resetCamera()">Reset</button>
-      <button onclick="setView('top')">Top</button>
-      <button onclick="setView('side')">Side</button>
-      <button onclick="setView('front')">Front</button>
-      <button onclick="toggleRotate()" id="rotate-btn">Rotate</button>
+
+    <!-- Top-right: Tools (below model label) -->
+    <div class="viewport-tools">
+      <button onclick="toggleRotate()" id="rotate-btn" class="spin-toggle">○ Auto-Spin</button>
+      <button id="view-mode-btn" onclick="cycleViewMode()">X-Ray ▸</button>
     </div>
+
     <input type="file" id="file-input" accept=".json" style="display:none" onchange="importDesignFromFile(this)">
   </div>
 
@@ -1297,14 +1401,14 @@
     <div class="designs-modal">
       <div class="designs-header">
         <h2>SAVED DESIGNS</h2>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button id="save-btn" class="save-flash" onclick="quickSave()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:0.85rem;padding:4px 12px;border-radius:4px;text-transform:uppercase;letter-spacing:0.5px;transition:all 0.15s;">Save</button>
-          <button class="designs-close" onclick="closeDesignsModal()">&times;</button>
-        </div>
+        <button class="designs-close" onclick="closeDesignsModal()">&times;</button>
+      </div>
+      <div class="designs-name-row">
+        <input type="text" id="design-name-input" placeholder="Design name&hellip;" spellcheck="false">
+        <button id="save-btn" class="save-flash" onclick="saveDesign()">Save</button>
       </div>
       <div class="designs-list" id="designs-list"></div>
       <div class="designs-footer">
-        <button onclick="saveAsNewDesign()">Save As&hellip;</button>
         <button onclick="newDesign()">New</button>
         <button onclick="document.getElementById('file-input').click()">Import</button>
         <button onclick="exportCurrentDesign()">Export</button>
@@ -1918,7 +2022,7 @@ function buildRuler() {
   const halfL = length / 2, halfW = width / 2;
   const sideGap = 1.2;     // distance from car edge to side rulers
   const endGap = 0.6;      // distance from car ends to end rulers
-  const y = -0.48;
+  const y = -0.42;
   const majorTick = 0.2;
   const minorTick = 0.1;
   const lineColor = 0x3a7abf;
@@ -2243,10 +2347,6 @@ function buildCar() {
 
   buildRuler();
 
-  // Update model spec label
-  const isCurved = noseHeight < frontHeight - 0.01 || scoopDepth > 0.01;
-  document.getElementById('model-spec').textContent =
-    `${length.toFixed(2)} × ${width.toFixed(2)} × ${Math.max(rearHeight, frontHeight, noseHeight).toFixed(2)} in${isCurved ? ' curved' : ''}`;
 }
 
 function calculateCoG() {
@@ -2414,16 +2514,21 @@ canvas.addEventListener('wheel', e => {
   updateCameraFromSpherical();
 }, { passive: false });
 
+let currentView = null;
 function resetCamera() {
   spherical = { theta: 0.8, phi: 1.0, radius: 12 };
   updateCameraFromSpherical();
+  clearPresetHighlight();
+}
+function clearPresetHighlight() {
+  currentView = null;
+  document.querySelectorAll('.preset-group button').forEach(b => b.classList.remove('active'));
 }
 function toggleRotate() {
   autoRotate = !autoRotate;
   const btn = document.getElementById('rotate-btn');
-  btn.textContent = autoRotate ? 'Pause' : 'Rotate';
-  btn.style.borderColor = autoRotate ? 'var(--green)' : '';
-  btn.style.color = autoRotate ? 'var(--green)' : '';
+  btn.textContent = autoRotate ? '● Auto-Spin' : '○ Auto-Spin';
+  btn.classList.toggle('active', autoRotate);
 }
 function toggleXRay() {
   xrayMode = !xrayMode;
@@ -2475,24 +2580,27 @@ function cycleViewMode() {
   }
 }
 function updateViewModeToggle() {
-  const label = document.getElementById('view-mode-label');
   const btn = document.getElementById('view-mode-btn');
   if (xrayMode) {
-    label.textContent = 'X-RAY';
-    btn.textContent = 'CUTAWAY';
+    btn.textContent = 'X-Ray ▸';
   } else if (cutawayMode) {
-    label.textContent = 'CUTAWAY';
-    btn.textContent = 'FULL';
+    btn.textContent = 'Cutaway ▸';
   } else {
-    label.textContent = 'FULL';
-    btn.textContent = 'X-RAY';
+    btn.textContent = 'Full ▸';
   }
 }
 function setView(view) {
+  if (currentView === view) {
+    clearPresetHighlight();
+    return;
+  }
   if (view === 'top') { spherical = { theta: 0, phi: 0.1, radius: 10 }; }
   else if (view === 'side') { spherical = { theta: Math.PI / 2, phi: Math.PI / 2, radius: 10 }; }
   else if (view === 'front') { spherical = { theta: Math.PI, phi: Math.PI / 2, radius: 10 }; }
   updateCameraFromSpherical();
+  currentView = view;
+  document.querySelectorAll('.preset-group button').forEach(b => b.classList.remove('active'));
+  document.getElementById('preset-' + view).classList.add('active');
 }
 
 // ===== UI UPDATES =====
@@ -3107,7 +3215,14 @@ function updateWeightDisplay() {
 
   // Header COG display
   const headerCogText = document.getElementById('header-cog-text');
-  headerCogText.textContent = `${fromRearAxle.toFixed(2)}" fwd // Target: ${cogTargetFromRearAxle.toFixed(2)}"`;
+  const absDelta = Math.abs(cogDelta).toFixed(2);
+  if (cogOnTarget) {
+    headerCogText.textContent = 'On target';
+  } else if (cogDelta > 0) {
+    headerCogText.textContent = `${absDelta}" ahead of target`;
+  } else {
+    headerCogText.textContent = `${absDelta}" behind target`;
+  }
   headerCogText.style.color = cogOnTarget ? 'var(--green)' : 'var(--amber)';
   const cogLight = document.getElementById('cog-status-light');
   cogLight.className = 'status-light' + (cogOnTarget ? '' : ' warning');
@@ -3465,33 +3580,28 @@ function applyParsedState(parsed) {
   }
 }
 
-function quickSave() {
-  if (!state.currentDesignId) {
-    saveAsNewDesign();
-    return;
-  }
-  const lib = getDesignLibrary();
-  const idx = lib.findIndex(d => d.id === state.currentDesignId);
-  if (idx === -1) {
-    saveAsNewDesign();
-    return;
-  }
-  lib[idx].state = snapshotState();
-  lib[idx].savedAt = new Date().toISOString();
-  saveDesignLibrary(lib);
-  saveState();
-  showSaveConfirmation();
-}
-
-function saveAsNewDesign() {
-  const name = prompt('Design name:', state.configName || 'Untitled');
-  if (name === null) return;
-  state.configName = name || 'Untitled';
+function saveDesign() {
+  const nameInput = document.getElementById('design-name-input');
+  const name = (nameInput.value || '').trim() || 'Untitled';
+  state.configName = name;
   document.getElementById('config-name-display').textContent = state.configName;
+  const lib = getDesignLibrary();
+  if (state.currentDesignId) {
+    const idx = lib.findIndex(d => d.id === state.currentDesignId);
+    if (idx !== -1) {
+      lib[idx].name = name;
+      lib[idx].state = snapshotState();
+      lib[idx].savedAt = new Date().toISOString();
+      saveDesignLibrary(lib);
+      saveState();
+      showSaveConfirmation();
+      renderDesignsList();
+      return;
+    }
+  }
   const id = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
   state.currentDesignId = id;
-  const lib = getDesignLibrary();
-  lib.push({ id, name: state.configName, savedAt: new Date().toISOString(), state: snapshotState() });
+  lib.push({ id, name, savedAt: new Date().toISOString(), state: snapshotState() });
   saveDesignLibrary(lib);
   saveState();
   showSaveConfirmation();
@@ -3505,6 +3615,7 @@ function loadDesign(id) {
   applyParsedState(entry.state);
   state.currentDesignId = id;
   state.configName = entry.name;
+  document.getElementById('design-name-input').value = entry.name;
   saveState();
   restoreUI();
   rebuildAll();
@@ -3536,6 +3647,7 @@ function newDesign() {
 }
 
 function openDesignsModal() {
+  document.getElementById('design-name-input').value = state.configName || '';
   renderDesignsList();
   document.getElementById('designs-backdrop').classList.add('open');
 }
