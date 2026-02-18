@@ -2,7 +2,7 @@
 
 A 3D design and optimization tool for pinewood derby cars. Visualize your car, dial in weight placement, check center of gravity, and validate against competition rules — all in the browser.
 
-![Pinewood Derby Lab](screenshot-overview.png)
+**[Try it live](https://lavallee.github.io/pinewood)**
 
 ## What This Does
 
